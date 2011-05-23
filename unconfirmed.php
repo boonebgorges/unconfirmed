@@ -32,9 +32,9 @@ class BBG_Unconfirmed {
 		$sql['order']	= strtoupper( $args['order'] );
 		$sql['limit']	= "LIMIT " . $args['offset'] . ", " . $args['number'];
 		
-		$sql = apply_filters( 'unconfirmed_query', join( ' ', $sql ), $sql, $args );
-		var_dump( $sql );
-		$users = $wpdb->get_results( $sql );
+		$paged_query = apply_filters( 'unconfirmed_paged_query', join( ' ', $sql ), $sql, $args );
+
+		$users = $wpdb->get_results( $wpdb->prepare( $paged_query ) );
 		
 		// Now loop through the users and unserialize their metadata for nice display
 		// Probably only necessary with BuddyPress
@@ -47,6 +47,13 @@ class BBG_Unconfirmed {
 		}
 		
 		$this->users = $users;
+		
+		// Gotta run a second query to get the overall pagination data
+		unset( $sql['limit'] );
+		$sql['select'] = "SELECT COUNT(*) FROM $wpdb->signups";
+		$total_query = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args );
+		
+		$this->total_users = $wpdb->get_var( $wpdb->prepare( $total_query ) );
 	}
 
 	function admin_panel_main() {
@@ -100,11 +107,10 @@ class BBG_Unconfirmed {
 		$query = new stdClass;
 		$query->users = $this->users;
 		
-		// In order for pagination to work, this must be set manually
-		$query->found_posts = count( $query->users );
+		// In order for Boone's Pagination to work, this stuff must be set manually
+		$query->found_posts = $this->total_users;
 		$query->max_num_pages = ceil( $query->found_posts / $pagination->get_per_page );
 		
-//		var_dump( $this->query ); die();
 		// Complete the pagination setup
 		$pagination->setup_query( $query );
 		//var_dump( $this->users );
@@ -120,7 +126,6 @@ class BBG_Unconfirmed {
 		<?php endif ?>
 		
 		<form action="" method="get">
-		
 		
 		<?php if ( !empty( $this->users ) ) : ?>
 			<div class="ia-admin-pagination">
