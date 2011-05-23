@@ -246,21 +246,17 @@ class BBG_Unconfirmed {
 		
 		// We use a different email function depending on whether they registered with blog
 		if ( !empty( $user->domain ) ) {
-			$result = wpmu_signup_blog_notification( $user->domain, $user->path, $user->title, $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+			wpmu_signup_blog_notification( $user->domain, $user->path, $user->title, $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
 		} else {
-			$result = wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+			wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
 		}
 		
-		if ( $result ) {
-			$redirect_url = add_query_arg( array(
-				'unconfirmed_status'	=> 'resent'
-			), $this->base_url );
-		} else {
-			$redirect_url = add_query_arg( array(
-				'unconfirmed_status'	=> 'unsent'
-			), $this->base_url );
-		}
-		
+		// I can't do a true/false check on whether the email was sent because of the
+		// crappy way that WPMU and BP work together to send these messages
+		// See bp_core_activation_signup_user_notification()
+		$redirect_url = add_query_arg( array(
+			'unconfirmed_status'	=> 'resent'
+		), $this->base_url );		
 		wp_redirect( $redirect_url );		
 	}
 	
