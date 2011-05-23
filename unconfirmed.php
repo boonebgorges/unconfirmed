@@ -80,7 +80,6 @@ class BBG_Unconfirmed {
 		// Get the user's activation key out of the URL params
 		if ( !isset( $_GET['unconfirmed_key'] ) ) {
 			$redirect_url = add_query_arg( array(
-				'page'			=> 'unconfirmed',
 				'unconfirmed_status'	=> 'nokey'
 			), $this->base_url );
 			
@@ -93,12 +92,10 @@ class BBG_Unconfirmed {
 		
 		if ( is_wp_error( $result ) ) {
 			$redirect_url = add_query_arg( array(
-				'page'			=> 'unconfirmed',
 				'unconfirmed_status'	=> 'couldnt_activate'
 			), $this->base_url );	
 		} else {
 			$redirect_url = add_query_arg( array(
-				'page'			=> 'unconfirmed',
 				'unconfirmed_status'	=> 'activated'
 			), $this->base_url );
 		}
@@ -116,7 +113,6 @@ class BBG_Unconfirmed {
 		// Get the user's activation key out of the URL params
 		if ( !isset( $_GET['unconfirmed_key'] ) ) {
 			$redirect_url = add_query_arg( array(
-				'page'			=> 'unconfirmed',
 				'unconfirmed_status'	=> 'nokey'
 			), $this->base_url );
 			
@@ -129,7 +125,6 @@ class BBG_Unconfirmed {
 		
 		if ( !$user ) {
 			$redirect_url = add_query_arg( array(
-				'page'			=> 'unconfirmed',
 				'unconfirmed_status'	=> 'no_user'
 			), $this->base_url );
 			
@@ -145,12 +140,10 @@ class BBG_Unconfirmed {
 		
 		if ( $result ) {
 			$redirect_url = add_query_arg( array(
-				'page'			=> 'unconfirmed',
 				'unconfirmed_status'	=> 'resent'
 			), $this->base_url );
 		} else {
 			$redirect_url = add_query_arg( array(
-				'page'			=> 'unconfirmed',
 				'unconfirmed_status'	=> 'unsent'
 			), $this->base_url );
 		}
