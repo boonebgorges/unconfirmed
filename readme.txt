@@ -4,7 +4,7 @@ Donate link: http://teleogistic.net/donate
 Tags: multisite, network, activate, activation, email
 Requires at least: WordPress 3.1 Multisite
 Tested up to: WordPress 3.2 beta
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 
 Allows admins on a WordPress Multisite network to manage unactivated users, by either activating them manually or resending the activation email.
 
@@ -23,6 +23,9 @@ Please note that this plugin currently only works with WordPress Multisite, aka 
 1. Navigate to Network Admin > Users > Unconfirmed 
 
 == Changelog ==
+
+= 1.0.3 =
+* Removes Boone's Sortable Columns plugin header to ensure no conflicts during WP plugin activation
 
 = 1.0.2 =
 * Adds language file
