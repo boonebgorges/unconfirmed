@@ -14,6 +14,8 @@ If you run a WordPress Multisite installation, you probably know that some of th
 
 Unconfirmed creates a Dashboard panel under Network Admin > Users that shows a list of unactivated user registrations. For each registration, you have the option of resending the original activation email, or manually activating the user.
 
+Please note that this plugin currently only works with WordPress Multisite, aka Network Mode.
+
 == Installation ==
 
 1. Install
