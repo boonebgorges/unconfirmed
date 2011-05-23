@@ -14,11 +14,27 @@ class BBG_Unconfirmed {
 		$this->__construct();
 	}
 	
-	function __construct() {
+	function __construct() {	
+		$this->base_url = add_query_arg( 'page', 'unconfirmed', is_multisite() ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
+		
 		add_action( is_multisite() ? 'network_admin_menu' : 'admin_menu', array( $this, 'add_admin_panel' ) );
 	}
 
 	function add_admin_panel() {
+		// Look for actions first
+		if ( isset( $_GET['unconfirmed_action'] ) ) {
+			switch ( $_GET['unconfirmed_action'] ) {
+				case 'activate' :
+					$this->activate_user();					
+					break;
+				
+				case 'resend' :
+				default :
+					$this->resend_email();
+					break;
+			}
+		}
+		
 		add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 	}
 	
@@ -56,7 +72,82 @@ class BBG_Unconfirmed {
 		$this->total_users = $wpdb->get_var( $wpdb->prepare( $total_query ) );
 	}
 
+	function activate_user() {
+		// Did you mean to do this? HMMM???
+		if ( !check_admin_referer( 'unconfirmed_activate_user' ) )
+			return false;
+		
+		// Get the user's activation key out of the URL params
+		if ( !isset( $_GET['unconfirmed_key'] ) ) {
+			$redirect_url = add_query_arg( array(
+				'page'			=> 'unconfirmed',
+				'unconfirmed_status'	=> 'nokey'
+			), $this->base_url );
+			
+			wp_redirect( $redirect_url );
+		}
+		
+		$key = $_GET['unconfirmed_key'];
+		
+		$result = wpmu_activate_signup( $key );
+		
+		if ( is_wp_error( $result ) ) {
+			$redirect_url = add_query_arg( array(
+				'page'			=> 'unconfirmed',
+				'unconfirmed_status'	=> 'couldnt_activate'
+			), $this->base_url );	
+		} else {
+			$redirect_url = add_query_arg( array(
+				'page'			=> 'unconfirmed',
+				'unconfirmed_status'	=> 'activated'
+			), $this->base_url );
+		}
+		
+		wp_redirect( $redirect_url );
+	}
+	
+	function render_messages() {
+		if ( isset( $_GET['unconfirmed_status'] ) ) {
+			switch ( $_GET['unconfirmed_status'] ) {
+				case 'nokey' :
+					$status  = 'error';
+					$message = __( 'No activation key was provided.', 'unconfirmed' ); 
+					break;
+				
+				case 'couldnt_activate' :
+					$status	 = 'error';
+					$message = __( 'The user could not be activated. Please try again.', 'unconfirmed' );
+					break;
+				
+				case 'activated' :
+					$status	 = 'updated';
+					$message = __( 'User activated!', 'unconfirmed' );
+					break;
+				
+				default :
+					break;
+			}
+		}
+		
+		if ( isset( $status ) ) {
+			$this->status  = $status;
+			$this->message = $message;
+			$this->message_content();
+		}
+	}
+	
+	function message_content() {
+		?>
+		
+		<div id="message" class="<?php echo $this->status ?>">
+			<p><?php echo $this->message ?></p>
+		</div>
+		
+		<?php
+	}
+	
 	function admin_panel_main() {
+		
 		if ( !class_exists( 'BBG_CPT_Pag' ) )
 			require_once( dirname( __FILE__ ) . '/lib/bbg-cpt-pag.php' );
 		$pagination = new BBG_CPT_Pag;
@@ -113,17 +204,13 @@ class BBG_Unconfirmed {
 		
 		// Complete the pagination setup
 		$pagination->setup_query( $query );
-		//var_dump( $this->users );
-		
-		$base_url = add_query_arg( 'page', 'unconfirmed', is_multisite() ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
 		
 		?>
 		<div class="wrap">
+		
 		<h2><?php _e( 'Unconfirmed', 'unconfirmed' ) ?></h2>
 		
-		<?php if ( isset( $_GET['mm-all-done'] ) ) : ?>
-			<div class="update-nag">All done!</div>
-		<?php endif ?>
+		<?php $this->render_messages() ?>
 		
 		<form action="" method="get">
 		
@@ -164,9 +251,9 @@ class BBG_Unconfirmed {
 						<?php echo $user->user_login ?>
 						
 						<div class="row-actions">
-							<span class="edit"><a class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'resend' => $user->activation_key ), $base_url ), 'unconfirmed_resend_email' ) ?>"><?php _e( 'Resend Activation Email', 'unconfirmed' ) ?></a></span>
+							<span class="edit"><a class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'unconfirmed_action' => 'resend', 'unconfirmed_key' => $user->activation_key ), $this->base_url ), 'unconfirmed_resend_email' ) ?>"><?php _e( 'Resend Activation Email', 'unconfirmed' ) ?></a></span>
 							&nbsp;&nbsp;
-							<span class="delete"><a class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'activate' => $user->activation_key ), $base_url ), 'unconfirmed_activate_user' ) ?>"><?php _e( 'Activate', 'unconfirmed' ) ?></a></span>
+							<span class="delete"><a class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'unconfirmed_action' => 'activate', 'unconfirmed_key' => $user->activation_key ), $this->base_url ), 'unconfirmed_activate_user' ) ?>"><?php _e( 'Activate', 'unconfirmed' ) ?></a></span>
 							
 						</div>
 					</td>
@@ -198,6 +285,10 @@ class BBG_Unconfirmed {
 				</div>
 			</div>
 			
+		<?php else : ?>
+		
+			<p><?php _e( 'No unactivated members were found.', 'unconfirmed' ) ?></p>
+		
 		<?php endif ?>
 		
 		
