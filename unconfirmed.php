@@ -82,6 +82,14 @@ class BBG_Unconfirmed {
 		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
 	}
 	
+	/**
+	 * Enqueues the Unconfirmed stylesheet
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 *
+	 * @uses wp_enqueue_style()
+	 */
 	function add_admin_styles() {		
 		wp_enqueue_style( 'unconfirmed-css', WP_PLUGIN_URL . '/unconfirmed/css/style.css' );
 	}
