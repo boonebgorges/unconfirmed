@@ -2,7 +2,7 @@
 
 /*
 Plugin Name: Unconfirmed
-Description: 
+Description: Allows admins on a WordPress Multisite network to manage unactivated users, by either activating them manually or resending the activation email.
 Author: Boone Gorges
 Network: true
 */
