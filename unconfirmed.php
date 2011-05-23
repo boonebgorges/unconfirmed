@@ -7,7 +7,7 @@ Description: Allows admins on a WordPress Multisite network to manage unactivate
 Author: Boone B Gorges
 Author URI: http://boonebgorges.com
 Licence: GPLv3
-Version: 1.0.8
+Version: 1.0.1
 Network: true
 */
 
@@ -78,7 +78,12 @@ class BBG_Unconfirmed {
 			}
 		}
 		
-		add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
+		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
+		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
+	}
+	
+	function add_admin_styles() {		
+		wp_enqueue_style( 'unconfirmed-css', WP_PLUGIN_URL . '/unconfirmed/css/style.css' );
 	}
 	
 	/**
@@ -404,7 +409,7 @@ class BBG_Unconfirmed {
 		<form action="" method="get">
 		
 		<?php if ( !empty( $this->users ) ) : ?>
-			<div class="ia-admin-pagination">
+			<div class="unconfirmed-pagination">
 				<div class="currently-viewing">
 					<?php $pagination->currently_viewing_text() ?>
 				</div>
@@ -464,7 +469,7 @@ class BBG_Unconfirmed {
 			</tbody>
 			</table>	
 			
-			<div class="ia-admin-pagination">
+			<div class="unconfirmed-pagination">
 				<div class="currently-viewing">
 					<?php $pagination->currently_viewing_text() ?>
 				</div>
