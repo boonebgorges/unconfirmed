@@ -106,6 +106,58 @@ class BBG_Unconfirmed {
 		wp_redirect( $redirect_url );
 	}
 	
+	function resend_email() {
+		global $wpdb;
+		
+		// Hubba hubba
+		if ( !check_admin_referer( 'unconfirmed_resend_email' ) )
+			return false;
+			
+		// Get the user's activation key out of the URL params
+		if ( !isset( $_GET['unconfirmed_key'] ) ) {
+			$redirect_url = add_query_arg( array(
+				'page'			=> 'unconfirmed',
+				'unconfirmed_status'	=> 'nokey'
+			), $this->base_url );
+			
+			wp_redirect( $redirect_url );
+		}
+		
+		$key = $_GET['unconfirmed_key'];
+		
+		$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
+		
+		if ( !$user ) {
+			$redirect_url = add_query_arg( array(
+				'page'			=> 'unconfirmed',
+				'unconfirmed_status'	=> 'no_user'
+			), $this->base_url );
+			
+			wp_redirect( $redirect_url );
+		}
+		
+		// We use a different email function depending on whether they registered with blog
+		if ( !empty( $user->domain ) ) {
+			$result = wpmu_signup_blog_notification( $user->domain, $user->path, $user->title, $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+		} else {
+			$result = wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+		}
+		
+		if ( $result ) {
+			$redirect_url = add_query_arg( array(
+				'page'			=> 'unconfirmed',
+				'unconfirmed_status'	=> 'resent'
+			), $this->base_url );
+		} else {
+			$redirect_url = add_query_arg( array(
+				'page'			=> 'unconfirmed',
+				'unconfirmed_status'	=> 'unsent'
+			), $this->base_url );
+		}
+		
+		wp_redirect( $redirect_url );		
+	}
+	
 	function render_messages() {
 		if ( isset( $_GET['unconfirmed_status'] ) ) {
 			switch ( $_GET['unconfirmed_status'] ) {
@@ -124,6 +176,21 @@ class BBG_Unconfirmed {
 					$message = __( 'User activated!', 'unconfirmed' );
 					break;
 				
+				case 'no_user' :
+					$status  = 'error';
+					$message = __( 'No user could be found with that activation key.', 'unconfirmed' );
+					break;
+				
+				case 'resent' :
+					$status  = 'updated';
+					$message = __( 'Activation email resent!', 'unconfirmed' );
+					break;
+				
+				case 'unsent' :
+					$status  = 'error';
+					$message = __( 'Email could not be sent.', 'unconfirmed' );
+					break;
+					
 				default :
 					break;
 			}
