@@ -12,18 +12,57 @@ Network: true
 */
 
 class BBG_Unconfirmed {
+	/**
+	 * The list of users created in the setup_users() method
+	 */
 	var $users;
 	
+	/**
+	 * PHP 4 constructor
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 */
 	function bbg_unconfirmed() {
 		$this->__construct();
 	}
 	
+	/**
+	 * PHP 5 constructor
+	 *
+	 * This function sets up a base url to use for URL concatenation throughout the plugin. It
+	 * also adds the admin menu with the network_admin_menu hook. At the moment, there appears
+	 * to be support for non-multisite installations, but at the moment it is only partial. I 
+	 * do not recommend that you bypass the is_multisite() check at the moment.
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 */
 	function __construct() {	
+		if ( !is_multisite() )
+			return;
+			
 		$this->base_url = add_query_arg( 'page', 'unconfirmed', is_multisite() ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
 		
 		add_action( is_multisite() ? 'network_admin_menu' : 'admin_menu', array( $this, 'add_admin_panel' ) );
 	}
 
+	/**
+	 * Adds the admin panel and detects incoming admin actions
+	 *
+	 * When the admin submits an action like "activate" or "resend activation email", it will
+	 * ultimately result in a redirect. In order to minimize the amount of work done in the
+	 * interim page load (after the link is clicked but before the redirect happens), I check
+	 * for these actions (out of $_GET parameters) before the admin panel is even added to the
+	 * Dashboard.
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 *
+	 * @uses BBG_Unconfirmed::activate_user() to process manual activations
+	 * @uses BBG_Unconfirmed::resend_email() to process manual activations
+	 * @uses add_users_page() to add the admin panel underneath user.php
+	 */
 	function add_admin_panel() {
 		// Look for actions first
 		if ( isset( $_GET['unconfirmed_action'] ) ) {
@@ -42,17 +81,51 @@ class BBG_Unconfirmed {
 		add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 	}
 	
+	/**
+	 * Queries and prepares a list of unactivated registrations for use elsewhere in the plugin
+	 *
+	 * This function is only called when such a list is required, i.e. on the admin pane
+	 * itself. See BBG_Unconfirmed::admin_panel_main().
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 *
+	 * @uses apply_filters() Filter 'unconfirmed_paged_query' to alter the per-page query
+	 * @uses apply_filters() Filter 'unconfirmed_total_query' to alter the total count query
+	 *
+	 * @param array $args See $defaults below for documentation
+	 */
 	function setup_users( $args ) {
 		global $wpdb;
+		
+		/**
+		 * Override the $defaults with the following parameters:
+		 *   - 'orderby': Which column should determine the sort? Accepts: 'registered', 
+		 *     'user_login', 'user_email', 'activation_key'
+		 *   - 'order': In conjunction with 'orderby', how should users be sorted? Accepts:
+		 *     'desc', 'asc'
+		 *   - 'offset': Which user are we starting with? Eg for the third page of 10, use
+		 *     31
+		 *   - 'number': How many users to return?
+		 */
+		$defaults = array(
+			'orderby' => 'registered',
+			'order'   => 'desc',
+			'offset'  => 0,
+			'number'  => 10
+		);
+		
+		$r = wp_parse_args( $args, $defaults );
+		extract( $r );
 		
 		$sql['select'] 	= "SELECT * FROM $wpdb->signups";
 		$sql['where'] 	= "WHERE active = 0";
 		
-		$sql['orderby'] = "ORDER BY " . $args['orderby'];
-		$sql['order']	= strtoupper( $args['order'] );
-		$sql['limit']	= "LIMIT " . $args['offset'] . ", " . $args['number'];
+		$sql['orderby'] = "ORDER BY " . $orderby;
+		$sql['order']	= strtoupper( $order );
+		$sql['limit']	= "LIMIT " . $offset . ", " . $number;
 		
-		$paged_query = apply_filters( 'unconfirmed_paged_query', join( ' ', $sql ), $sql, $args );
+		$paged_query = apply_filters( 'unconfirmed_paged_query', join( ' ', $sql ), $sql, $args, $r );
 
 		$users = $wpdb->get_results( $wpdb->prepare( $paged_query ) );
 		
@@ -71,11 +144,22 @@ class BBG_Unconfirmed {
 		// Gotta run a second query to get the overall pagination data
 		unset( $sql['limit'] );
 		$sql['select'] = "SELECT COUNT(*) FROM $wpdb->signups";
-		$total_query = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args );
+		$total_query = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args, $r );
 		
 		$this->total_users = $wpdb->get_var( $wpdb->prepare( $total_query ) );
 	}
 
+	/**
+	 * Activates a user
+	 *
+	 * Depending on the result, the admin will be redirected back to the main Unconfirmed panel,
+	 * with additional URL params that explain success/failure.
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 *
+	 * @uses wpmu_activate_signup() WP's core function for user activation on Multisite
+	 */
 	function activate_user() {
 		// Did you mean to do this? HMMM???
 		if ( !check_admin_referer( 'unconfirmed_activate_user' ) )
@@ -107,6 +191,18 @@ class BBG_Unconfirmed {
 		wp_redirect( $redirect_url );
 	}
 	
+	/**
+	 * Resends an activation email
+	 *
+	 * This sends exactly the same email the registrant originally got, using data pulled from
+	 * their registration. In the future I may add a UI for customized emails.
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 *
+	 * @uses wpmu_signup_blog_notification() to notify users who signed up with a blog
+	 * @uses wpmu_signup_blog_notification() to notify users who signed up without a blog
+	 */
 	function resend_email() {
 		global $wpdb;
 		
@@ -155,6 +251,15 @@ class BBG_Unconfirmed {
 		wp_redirect( $redirect_url );		
 	}
 	
+	/**
+	 * Picks the error/success messages out of the URL and matches them with messages to be
+	 * displayed in a confirmation box.
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 *
+	 * @uses BBG_Unconfirmed::message_content() to actually print the message to the screen
+	 */
 	function render_messages() {
 		if ( isset( $_GET['unconfirmed_status'] ) ) {
 			switch ( $_GET['unconfirmed_status'] ) {
@@ -200,6 +305,16 @@ class BBG_Unconfirmed {
 		}
 	}
 	
+	/**
+	 * Echoes the error message to the screen.
+	 *
+	 * Uses the standard WP admin nag markup.
+	 * 
+	 * Not sure why I put this in a separate method. I guess, so you can override it easily?
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 */
 	function message_content() {
 		?>
 		
@@ -210,6 +325,16 @@ class BBG_Unconfirmed {
 		<?php
 	}
 	
+	/**
+	 * Renders the main Unconfirmed Dashboard panel
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 *
+	 * @uses BBG_CPT_Pag aka Boone's Pagination
+	 * @uses BBG_CPT_Sort aka Boone's Sortable Columns
+	 * @uses BBG_Unconfirmed::setup_users() to get a list of unactivated users
+	 */
 	function admin_panel_main() {
 		
 		if ( !class_exists( 'BBG_CPT_Pag' ) )
@@ -354,18 +479,12 @@ class BBG_Unconfirmed {
 			<p><?php _e( 'No unactivated members were found.', 'unconfirmed' ) ?></p>
 		
 		<?php endif ?>
-		
-		
-		
-		
-		
+			
 		</form>
 		
 		</div>
 		<?php
 	}
-
-
 }
 
 $bbg_unconfirmed = new BBG_Unconfirmed;
