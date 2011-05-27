@@ -494,7 +494,7 @@ class BBG_Unconfirmed {
 	function admin_panel_main() {
 		
 		if ( !class_exists( 'BBG_CPT_Pag' ) )
-			require_once( dirname( __FILE__ ) . '/lib/bbg-cpt-pag.php' );
+			require_once( dirname( __FILE__ ) . '/lib/boones-pagination.php' );
 		$pagination = new BBG_CPT_Pag;
 		
 		// Load the sortable helper
