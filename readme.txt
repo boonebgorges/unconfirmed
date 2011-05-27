@@ -4,7 +4,7 @@ Donate link: http://teleogistic.net/donate
 Tags: multisite, network, activate, activation, email
 Requires at least: WordPress 3.1 Multisite
 Tested up to: WordPress 3.2 beta
-Stable tag: 1.0.3
+Stable tag: 1.1
 
 Allows admins on a WordPress Multisite network to manage unactivated users, by either activating them manually or resending the activation email.
 
