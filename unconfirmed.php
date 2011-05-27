@@ -158,13 +158,23 @@ class BBG_Unconfirmed {
 
 		$users = $wpdb->get_results( $wpdb->prepare( $paged_query ) );
 		
+		// Get the resent counts
+		$resent_counts = get_site_option( 'unconfirmed_resent_counts' );
+		
 		// Now loop through the users and unserialize their metadata for nice display
 		// Probably only necessary with BuddyPress
+		// We'll also use this opportunity to add the resent counts to the user objects
 		foreach( $users as $key => $user ) {
 			$meta = maybe_unserialize( $user->meta );
+			
 			foreach( (array)$meta as $mkey => $mvalue ) {
 				$user->$mkey = $mvalue;
 			}
+			
+			foreach( (array)$resent_counts as $resent_count ) {
+				$user->resent_count = $resent_count;
+			}
+			
 			$users[$key] = $user;
 		}
 		
@@ -241,10 +251,10 @@ class BBG_Unconfirmed {
 			return;
 		}
 		
+		$resent_counts = get_site_option( 'unconfirmed_resent_counts' );
+		
 		$keys = $_GET['unconfirmed_key'];
 		
-		// Default status is success
-		$status = 'resent';
 		foreach( (array)$keys as $key ) { 			
 			$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
 				
@@ -259,12 +269,20 @@ class BBG_Unconfirmed {
 			} else {
 				wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
 			}
+			
+			if ( isset( $resent_counts[$key] ) ) {
+				$resent_counts[$key] = $resent_counts[$key] + 1;
+			} else {
+				$resent_counts = 1;
+			}
 					
 			// I can't do a true/false check on whether the email was sent because of
 			// the crappy way that WPMU and BP work together to send these messages
 			// See bp_core_activation_signup_user_notification()		
 			$this->record_status( 'updated_resent', $key );	
-		}	
+		}
+		
+		update_site_option( 'unconfirmed_resent_counts', $resent_counts );
 	}
 	
 	/**
@@ -485,6 +503,12 @@ class BBG_Unconfirmed {
 				'title'		=> __( 'Activation Key', 'unconfirmed' ),
 				'css_class'	=> 'activation-key'
 			),
+			array(
+				'name'		=> 'resent_count',
+				'title'		=> __( '# of Times Resent', 'unconfirmed' ),
+				'css_class'	=> 'resent-count',
+				'default_order' => 'desc'
+			)
 		);
 		
 		$sortable = new BBG_CPT_Sort( $cols );
@@ -588,6 +612,10 @@ class BBG_Unconfirmed {
 					
 					<td class="activation_key">
 						<?php echo $user->activation_key ?>						
+					</td>
+					
+					<td class="activation_key">
+						<?php echo (int)$user->resent_count ?>						
 					</td>
 					
 				</tr>
