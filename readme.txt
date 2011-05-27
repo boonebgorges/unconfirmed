@@ -26,6 +26,7 @@ Please note that this plugin currently only works with WordPress Multisite, aka 
 
 = 1.1 =
 * Adds bulk resend/activate options
+* Adds a Resent Count column, to keep track of how many times an activation email has been resent to a given user
 * Refines the success/failure messages to contain better information
 
 = 1.0.3 =
