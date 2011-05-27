@@ -24,6 +24,10 @@ Please note that this plugin currently only works with WordPress Multisite, aka 
 
 == Changelog ==
 
+= 1.1 =
+* Adds bulk resend/activate options
+* Refines the success/failure messages to contain better information
+
 = 1.0.3 =
 * Removes Boone's Sortable Columns plugin header to ensure no conflicts during WP plugin activation
 

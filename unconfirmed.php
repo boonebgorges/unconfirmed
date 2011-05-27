@@ -18,6 +18,16 @@ class BBG_Unconfirmed {
 	var $users;
 	
 	/**
+	 * An array of results created by the activate_user() and resend_email() methods
+	 */
+	var $results;
+	
+	/**
+	 * Users to be printed in the error/updated message box
+	 */
+	var $results_emails;
+
+	/**
 	 * PHP 4 constructor
 	 *
 	 * @package Unconfirmed
@@ -65,7 +75,7 @@ class BBG_Unconfirmed {
 	 */
 	function add_admin_panel() {
 		// Look for actions first
-		if ( isset( $_GET['unconfirmed_action'] ) ) {
+		if ( isset( $_GET['unconfirmed_action'] ) ) {			
 			switch ( $_GET['unconfirmed_action'] ) {
 				case 'activate' :
 					$this->activate_user();					
@@ -76,6 +86,12 @@ class BBG_Unconfirmed {
 					$this->resend_email();
 					break;
 			}
+			
+			$this->do_redirect();
+		}
+		
+		if ( isset( $_GET['unconfirmed_complete'] ) ) {
+			$this->setup_get_users();
 		}
 		
 		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
@@ -180,30 +196,22 @@ class BBG_Unconfirmed {
 		else 
 			check_admin_referer( 'unconfirmed_activate_user' );
 		
-		// Get the user's activation key out of the URL params
+		// Get the activation key(s) out of the URL params
 		if ( !isset( $_GET['unconfirmed_key'] ) ) {
-			$redirect_url = add_query_arg( array(
-				'unconfirmed_status'	=> 'nokey'
-			), $this->base_url );
-			
-			wp_redirect( $redirect_url );
+			$this->record_status( 'error_nokey' );
+			return;
 		}
 		
 		$keys = $_GET['unconfirmed_key'];
 		
-		$status = 'activated';
 		foreach( (array)$keys as $key ) { 
 			$result = wpmu_activate_signup( $key );
 			
 			if ( is_wp_error( $result ) )
-				$status = 'couldnt_activate';
+				$this->record_status( 'error_couldntactivate', $key );
+			else
+				$this->record_status( 'updated_activated', $key ); 
 		}
-		
-		$redirect_url = add_query_arg( array(
-			'unconfirmed_status'	=> $status
-		), $this->base_url );	
-		
-		wp_redirect( $redirect_url );
 	}
 	
 	/**
@@ -229,11 +237,8 @@ class BBG_Unconfirmed {
 		
 		// Get the user's activation key out of the URL params
 		if ( !isset( $_GET['unconfirmed_key'] ) ) {
-			$redirect_url = add_query_arg( array(
-				'unconfirmed_status'	=> 'nokey'
-			), $this->base_url );
-			
-			wp_redirect( $redirect_url );
+			$this->record_status( 'error_nokey' );
+			return;
 		}
 		
 		$keys = $_GET['unconfirmed_key'];
@@ -244,7 +249,7 @@ class BBG_Unconfirmed {
 			$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
 				
 			if ( !$user ) {
-				$status = 'no_user';
+				$this->record_status( 'error_nouser', $key );
 				continue;
 			}
 			
@@ -254,69 +259,160 @@ class BBG_Unconfirmed {
 			} else {
 				wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
 			}
+					
+			// I can't do a true/false check on whether the email was sent because of
+			// the crappy way that WPMU and BP work together to send these messages
+			// See bp_core_activation_signup_user_notification()		
+			$this->record_status( 'updated_resent', $key );	
 		}	
-		
-		// I can't do a true/false check on whether the email was sent because of the
-		// crappy way that WPMU and BP work together to send these messages
-		// See bp_core_activation_signup_user_notification()
-		$redirect_url = add_query_arg( array(
-			'unconfirmed_status'	=> $status
-		), $this->base_url );		
-		
-		wp_redirect( $redirect_url );		
 	}
 	
 	/**
-	 * Picks the error/success messages out of the URL and matches them with messages to be
-	 * displayed in a confirmation box.
+	 * Utility function for recording the status of a resend/activation attempt
+	 *
+	 * @package Unconfirmed
+	 * @since 1.1
+	 *
+	 * @param str $status Something like 'updated_resent'
+	 * @param str $key The activation key of the affected user, if available
+	 */
+	function record_status( $status, $key = false ) {
+		$this->results[$status][] = $key;
+	}
+	
+	/**
+	 * Redirects the user after the requestion actions have been performed
+	 *
+	 * The function builds the redirect URL out of the $results array, so that messages can be
+	 * rendered on the redirected page.
+	 *
+	 * @package Unconfirmed
+	 * @since 1.1
+	 */
+	function do_redirect() {
+		$query_vars = array( 'unconfirmed_complete' => '1' );
+		
+		foreach( $this->results as $status => $keys ) {
+			$query_vars[$status] = implode( ',', $keys );
+		}
+		
+		$redirect_url = add_query_arg( $query_vars, $this->base_url );
+		
+		wp_redirect( $redirect_url );	
+	}
+	
+	/**
+	 * Gets user activation keys out of the URL parameters and converts them to email addresses
+	 *
+	 * @package Unconfirmed
+	 * @since 1.1
+	 */
+	function setup_get_users() {
+		global $wpdb;
+		
+		foreach( $_GET as $get_key => $activation_keys ) {
+			$get_key = explode( '_', $get_key );
+			
+			if ( 'updated' == $get_key[0] || 'error' == $get_key[0] ) {
+				$activation_keys = explode( ',', $activation_keys );
+
+				foreach( (array)$activation_keys as $ak_index => $activation_key ) {
+					$activation_keys[$ak_index] = '"' . $activation_key . '"';
+				}
+
+				$activation_keys = implode( ',', $activation_keys );
+				
+				$registrations = $wpdb->get_results( $wpdb->prepare( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" ) );
+
+				$updated_or_error = $get_key[0];
+				$message_type = $get_key[1];
+				
+				$this->results_emails[$updated_or_error][$message_type] = $registrations;
+			}
+		}
+	}
+	
+	/**
+	 * Loops through the results_emails to create success/failure messages
 	 *
 	 * @package Unconfirmed
 	 * @since 1.0
-	 *
-	 * @uses BBG_Unconfirmed::message_content() to actually print the message to the screen
 	 */
-	function render_messages() {
-		if ( isset( $_GET['unconfirmed_status'] ) ) {
-			switch ( $_GET['unconfirmed_status'] ) {
-				case 'nokey' :
-					$status  = 'error';
-					$message = __( 'No activation key was provided.', 'unconfirmed' ); 
-					break;
-				
-				case 'couldnt_activate' :
-					$status	 = 'error';
-					$message = __( 'The user could not be activated. Please try again.', 'unconfirmed' );
-					break;
-				
-				case 'activated' :
-					$status	 = 'updated';
-					$message = __( 'User activated!', 'unconfirmed' );
-					break;
-				
-				case 'no_user' :
-					$status  = 'error';
-					$message = __( 'No user could be found with that activation key.', 'unconfirmed' );
-					break;
-				
-				case 'resent' :
-					$status  = 'updated';
-					$message = __( 'Activation email resent!', 'unconfirmed' );
-					break;
-				
-				case 'unsent' :
-					$status  = 'error';
-					$message = __( 'Email could not be sent.', 'unconfirmed' );
-					break;
-					
-				default :
-					break;
-			}
-		}
+	function setup_messages() {
+		global $wpdb;
 		
-		if ( isset( $status ) ) {
-			$this->status  = $status;
-			$this->message = $message;
-			$this->message_content();
+		if ( !empty( $this->results_emails ) ) {
+		
+			// Cycle through the successful actions first
+			if ( !empty( $this->results_emails['updated'] ) ) {
+				foreach( $this->results_emails['updated'] as $message_type => $registrations ) {
+					if ( !empty( $registrations ) ) {
+						$emails = array();
+						
+						foreach( $registrations as $registration ) {
+							$emails[] = $registration->user_email;
+						}
+						
+						$emails = implode( ', ', $emails );
+						
+					}
+					
+					switch ( $message_type ) {
+						case 'activated' :
+							$message = sprintf( __( 'You successfully activated the following users: %s', 'unconfirmed' ), $emails );
+							break;
+						
+						case 'resent' :
+							$message = sprintf( __( 'You successfully resent activation emails to the following users: %s', 'unconfirmed' ), $emails );
+							break;
+							
+						default :
+							break;
+					}
+				}
+				
+				$this->message['updated'] = $message; 
+			}
+			
+			// Now cycle through the failures
+			if ( !empty( $this->results_emails['error'] ) ) {
+				foreach( $this->results_emails['error'] as $message_type => $registrations ) {
+					if ( !empty( $registrations ) ) {
+						$emails = array();
+						
+						foreach( $registrations as $registration ) {
+							$emails[] = $registration->user_email;
+						}
+						
+						$emails = implode( ', ', $emails );
+					}
+
+					switch ( $message_type ) {
+						case 'nokey' :
+							$message = __( 'You didn\'t provide an activation key.', 'unconfirmed' ); 
+							break;
+						
+						case 'couldntactivate' :
+							$message = sprintf( __( 'The following users could not be activated: %s', 'unconfirmed' ), $emails );
+							break;
+						
+						case 'nouser' :
+							$message = __( 'You provided invalid activation keys.', 'unconfirmed' );
+							break;
+						
+						case 'unsent' :
+							$message = sprintf( __( 'Activations emails could not be resent to the following email addresses: %s', 'unconfirmed' ), $emails );
+							break;
+							
+						default :
+							break;
+					}
+					
+				}
+				
+				$this->message['error'] = $message; 
+			}
+			
 		}
 	}
 	
@@ -330,14 +426,20 @@ class BBG_Unconfirmed {
 	 * @package Unconfirmed
 	 * @since 1.0
 	 */
-	function message_content() {
+	function render_messages() {
+		$this->setup_messages();
+		
+		if ( !empty( $this->message ) ) {
 		?>
 		
-		<div id="message" class="<?php echo $this->status ?>">
-			<p><?php echo $this->message ?></p>
-		</div>
+		<?php foreach( (array)$this->message as $message_type => $text ) : ?>
+			<div id="message" class="<?php echo $message_type ?>">
+				<p><?php echo $text ?></p>
+			</div>
+		<?php endforeach ?>
 		
 		<?php
+		}
 	}
 	
 	/**
