@@ -1,20 +1,13 @@
 .unconfirmed-pagination {
-	position: relative;
 	height: 30px;
 	margin-top: 10px;
 	color: #555;
 	font-size: 11px;
 }
 	.unconfirmed-pagination .currently-viewing {
-		position: absolute;
-		top: 0;
-		left: 0;
 		font-style: italic;
 	}
 	.unconfirmed-pagination .pag-links {
-		position: absolute;
-		top: 0;
-		right: 0;
 	}
 	.unconfirmed-pagination .page-numbers {
 		margin-left: 8px;

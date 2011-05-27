@@ -175,8 +175,10 @@ class BBG_Unconfirmed {
 	 */
 	function activate_user() {
 		// Did you mean to do this? HMMM???
-		if ( !check_admin_referer( 'unconfirmed_activate_user' ) )
-			return false;
+		if ( isset( $_GET['unconfirmed_bulk'] ) )
+			check_admin_referer( 'unconfirmed_bulk_action' );
+		else 
+			check_admin_referer( 'unconfirmed_activate_user' );
 		
 		// Get the user's activation key out of the URL params
 		if ( !isset( $_GET['unconfirmed_key'] ) ) {
@@ -187,19 +189,19 @@ class BBG_Unconfirmed {
 			wp_redirect( $redirect_url );
 		}
 		
-		$key = $_GET['unconfirmed_key'];
+		$keys = $_GET['unconfirmed_key'];
 		
-		$result = wpmu_activate_signup( $key );
-		
-		if ( is_wp_error( $result ) ) {
-			$redirect_url = add_query_arg( array(
-				'unconfirmed_status'	=> 'couldnt_activate'
-			), $this->base_url );	
-		} else {
-			$redirect_url = add_query_arg( array(
-				'unconfirmed_status'	=> 'activated'
-			), $this->base_url );
+		$status = 'activated';
+		foreach( (array)$keys as $key ) { 
+			$result = wpmu_activate_signup( $key );
+			
+			if ( is_wp_error( $result ) )
+				$status = 'couldnt_activate';
 		}
+		
+		$redirect_url = add_query_arg( array(
+			'unconfirmed_status'	=> $status
+		), $this->base_url );	
 		
 		wp_redirect( $redirect_url );
 	}
@@ -220,9 +222,11 @@ class BBG_Unconfirmed {
 		global $wpdb;
 		
 		// Hubba hubba
-		if ( !check_admin_referer( 'unconfirmed_resend_email' ) )
-			return false;
-			
+		if ( isset( $_GET['unconfirmed_bulk'] ) )
+			check_admin_referer( 'unconfirmed_bulk_action' );
+		else
+			check_admin_referer( 'unconfirmed_resend_email' );
+		
 		// Get the user's activation key out of the URL params
 		if ( !isset( $_GET['unconfirmed_key'] ) ) {
 			$redirect_url = add_query_arg( array(
@@ -232,31 +236,33 @@ class BBG_Unconfirmed {
 			wp_redirect( $redirect_url );
 		}
 		
-		$key = $_GET['unconfirmed_key'];
+		$keys = $_GET['unconfirmed_key'];
 		
-		$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
-		
-		if ( !$user ) {
-			$redirect_url = add_query_arg( array(
-				'unconfirmed_status'	=> 'no_user'
-			), $this->base_url );
+		// Default status is success
+		$status = 'resent';
+		foreach( (array)$keys as $key ) { 			
+			$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
+				
+			if ( !$user ) {
+				$status = 'no_user';
+				continue;
+			}
 			
-			wp_redirect( $redirect_url );
-		}
-		
-		// We use a different email function depending on whether they registered with blog
-		if ( !empty( $user->domain ) ) {
-			wpmu_signup_blog_notification( $user->domain, $user->path, $user->title, $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
-		} else {
-			wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
-		}
+			// We use a different email function depending on whether they registered with blog
+			if ( !empty( $user->domain ) ) {
+				wpmu_signup_blog_notification( $user->domain, $user->path, $user->title, $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+			} else {
+				wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+			}
+		}	
 		
 		// I can't do a true/false check on whether the email was sent because of the
 		// crappy way that WPMU and BP work together to send these messages
 		// See bp_core_activation_signup_user_notification()
 		$redirect_url = add_query_arg( array(
-			'unconfirmed_status'	=> 'resent'
+			'unconfirmed_status'	=> $status
 		), $this->base_url );		
+		
 		wp_redirect( $redirect_url );		
 	}
 	
@@ -413,13 +419,27 @@ class BBG_Unconfirmed {
 		<form action="" method="get">
 		
 		<?php if ( !empty( $this->users ) ) : ?>
-			<div class="unconfirmed-pagination">
-				<div class="currently-viewing">
-					<?php $pagination->currently_viewing_text() ?>
+			<div class="tablenav top">
+				<div class="alignleft actions">
+					<select name="unconfirmed_action">
+						<option value="resend"><?php _e( 'Resend Activation Email', 'unconfirmed' ) ?></option>
+						<option value="activate"><?php _e( 'Activate', 'unconfirmed' ) ?></option>
+					</select>
+					
+					<input id="doaction" class="button-secondary action" type="submit" value="<?php _e( 'Apply', 'unconfirmed' ) ?>" />
+					<input type="hidden" name="unconfirmed_bulk" value="1" />
+					
+					<?php wp_nonce_field( 'unconfirmed_bulk_action' ) ?>
 				</div>
 				
-				<div class="pag-links">
-					<?php $pagination->paginate_links() ?>
+				<div class="tablenav-pages unconfirmed-pagination">
+					<div class="currently-viewing alignleft">
+						<?php $pagination->currently_viewing_text() ?>
+					</div>
+					
+					<div class="pag-links alignright">
+						<?php $pagination->paginate_links() ?>
+					</div>
 				</div>
 			</div>
 			
@@ -442,7 +462,7 @@ class BBG_Unconfirmed {
 				<?php foreach ( $this->users as $user ) : ?>
 				<tr>
 					<th scope="row" class="check-column">
-						<input type="checkbox" />
+						<input type="checkbox" name="unconfirmed_key[]" value="<?php echo $user->activation_key ?>" />
 					</th>
 					
 					<td class="login">
@@ -473,13 +493,15 @@ class BBG_Unconfirmed {
 			</tbody>
 			</table>	
 			
-			<div class="unconfirmed-pagination">
-				<div class="currently-viewing">
-					<?php $pagination->currently_viewing_text() ?>
-				</div>
-				
-				<div class="pag-links">
-					<?php $pagination->paginate_links() ?>
+			<div class="tablenav bottom">
+				<div class="unconfirmed-pagination alignright">
+					<div class="currently-viewing alignleft">
+						<?php $pagination->currently_viewing_text() ?>
+					</div>
+					
+					<div class="pag-links alignright">
+						<?php $pagination->paginate_links() ?>
+					</div>
 				</div>
 			</div>
 			
