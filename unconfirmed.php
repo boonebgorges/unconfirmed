@@ -18,6 +18,11 @@ class BBG_Unconfirmed {
 	var $users;
 	
 	/**
+	 * The requested sort order. Only needed in this format when sorting by resent counts
+	 */
+	var $order;
+	
+	/**
 	 * An array of results created by the activate_user() and resend_email() methods
 	 */
 	var $results;
@@ -52,6 +57,8 @@ class BBG_Unconfirmed {
 		if ( !is_multisite() )
 			return;
 			
+		add_filter( 'boones_sortable_columns_keys_to_remove', array( $this, 'sortable_keys_to_remove' ) );
+		
 		$this->base_url = add_query_arg( 'page', 'unconfirmed', is_multisite() ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
 		
 		add_action( is_multisite() ? 'network_admin_menu' : 'admin_menu', array( $this, 'add_admin_panel' ) );
@@ -154,12 +161,12 @@ class BBG_Unconfirmed {
 		$sql['order']	= strtoupper( $order );
 		$sql['limit']	= "LIMIT " . $offset . ", " . $number;
 		
-		$paged_query = apply_filters( 'unconfirmed_paged_query', join( ' ', $sql ), $sql, $args, $r );
-
-		$users = $wpdb->get_results( $wpdb->prepare( $paged_query ) );
-		
 		// Get the resent counts
 		$resent_counts = get_site_option( 'unconfirmed_resent_counts' );
+		
+		$paged_query = apply_filters( 'unconfirmed_paged_query', join( ' ', $sql ), $sql, $args, $r );
+
+		$users = $wpdb->get_results( $wpdb->prepare( $paged_query ) );		
 		
 		// Now loop through the users and unserialize their metadata for nice display
 		// Probably only necessary with BuddyPress
@@ -171,9 +178,7 @@ class BBG_Unconfirmed {
 				$user->$mkey = $mvalue;
 			}
 			
-			foreach( (array)$resent_counts as $resent_count ) {
-				$user->resent_count = $resent_count;
-			}
+			$user->resent_count = isset( $resent_counts[$user->activation_key]  ) ? $resent_counts[$user->activation_key] : 0;
 			
 			$users[$key] = $user;
 		}
@@ -186,6 +191,22 @@ class BBG_Unconfirmed {
 		$total_query = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args, $r );
 		
 		$this->total_users = $wpdb->get_var( $wpdb->prepare( $total_query ) );
+	}
+	
+	function sortable_keys_to_remove( $keys ) {
+		$unconfirmed_keys = array(
+			'unconfirmed_complete',
+			'unconfirmed_key',
+			'updated_resent',
+			'updated_activated',
+			'error_couldntactivate',
+			'error_nouser',
+			'error_nokey'
+		);
+		
+		$keys = array_merge( $keys, $unconfirmed_keys );
+		
+		return $keys;
 	}
 
 	/**
@@ -273,7 +294,7 @@ class BBG_Unconfirmed {
 			if ( isset( $resent_counts[$key] ) ) {
 				$resent_counts[$key] = $resent_counts[$key] + 1;
 			} else {
-				$resent_counts = 1;
+				$resent_counts[$key] = 1;
 			}
 					
 			// I can't do a true/false check on whether the email was sent because of
@@ -478,7 +499,7 @@ class BBG_Unconfirmed {
 		
 		// Load the sortable helper
 		if ( !class_exists( 'BBG_CPT_Sort' ) )
-			require_once( dirname( __FILE__ ) . '/lib/bbg-cpt-sort.php' );
+			require_once( dirname( __FILE__ ) . '/lib/boones-sortable-columns.php' );
 			
 		$cols = array(
 			array(
@@ -507,7 +528,8 @@ class BBG_Unconfirmed {
 				'name'		=> 'resent_count',
 				'title'		=> __( '# of Times Resent', 'unconfirmed' ),
 				'css_class'	=> 'resent-count',
-				'default_order' => 'desc'
+				'default_order' => 'desc',
+				'is_sortable'	=> false
 			)
 		);
 		
@@ -548,7 +570,7 @@ class BBG_Unconfirmed {
 			<div class="tablenav top">
 				<div class="alignleft actions">
 					<select name="unconfirmed_action">
-						<option value="resend"><?php _e( 'Resend Activation Email', 'unconfirmed' ) ?></option>
+						<option value="resend"><?php _e( 'Resend Activation Email', 'unconfirmed' ) ?>&nbsp;&nbsp;</option>
 						<option value="activate"><?php _e( 'Activate', 'unconfirmed' ) ?></option>
 					</select>
 					
@@ -624,7 +646,7 @@ class BBG_Unconfirmed {
 			</table>	
 			
 			<div class="tablenav bottom">
-				<div class="unconfirmed-pagination alignright">
+				<div class="unconfirmed-pagination alignright tablenav-pages">
 					<div class="currently-viewing alignleft">
 						<?php $pagination->currently_viewing_text() ?>
 					</div>
