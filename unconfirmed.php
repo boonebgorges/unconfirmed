@@ -262,6 +262,24 @@ class BBG_Unconfirmed {
 		
 		return $keys;
 	}
+	
+	function get_userdata_from_key( $key ) {
+		global $wpdb;
+		
+		// The following is partially borrowed from BuddyPress
+				
+		// Activation key is stored either in wp_users > user_activation_key
+		// or in wp_usermeta. Look both places
+		
+		if ( $user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE user_activation_key = %s", $key ) ) ) {
+			$key_loc = 'users';
+		} else if ( $user_id = $wpdb->get_var( $wpdb->prepare( "SELECT user_id FROM $wpdb->usermeta WHERE meta_key = 'activation_key' AND meta_value = %s", $key ) ) ) {
+			$key_loc = 'usermeta';
+			$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE ID = %d", (int)$user_id ) );
+		}
+		
+		return $user;
+	}
 
 	/**
 	 * Activates a user
@@ -295,21 +313,20 @@ class BBG_Unconfirmed {
 			if ( is_multisite() ) {
 				$result = wpmu_activate_signup( $key );
 			} else {
-				// The following is partially borrowed from BuddyPress
+				$user = $this->get_userdata_from_key( $key );
 				
-				// Activation key is stored either in wp_users > user_activation_key
-				// or in wp_usermeta. Look both places
-				if ( $user_id = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->users WHERE user_activation_key = %s", $key ) ) ) {
-					$key_loc = 'users';
-				} else if ( $user_id = $wpdb->get_var( $wpdb->prepare( "SELECT user_id FROM $wpdb->usermeta WHERE meta_key = 'activation_key' AND meta_value = %s", $key ) ) ) {
-					$key_loc = 'usermeta';
+				if ( empty( $user->ID ) ) {
+					$this->record_status( 'error_nouser' );
+					return;
+				} else {
+					$user_id = $user->ID;
 				}
 		
 				if ( empty( $user_id ) )
 					return new WP_Error( 'invalid_key', __( 'Invalid activation key', 'unconfirmed' ) );
 		
 				// Change the user's status so they become active
-				if ( !$wpdb->query( $wpdb->prepare( "UPDATE $wpdb->users SET user_status = 0 WHERE ID = %d", $user_id ) ) )
+				if ( !$result = $wpdb->query( $wpdb->prepare( "UPDATE $wpdb->users SET user_status = 0 WHERE ID = %d", $user_id ) ) )
 					return new WP_Error( 'invalid_key', __( 'Invalid activation key', 'unconfirmed' ) );
 			}
 			
@@ -429,14 +446,26 @@ class BBG_Unconfirmed {
 			
 			if ( 'updated' == $get_key[0] || 'error' == $get_key[0] ) {
 				$activation_keys = explode( ',', $activation_keys );
-
-				foreach( (array)$activation_keys as $ak_index => $activation_key ) {
-					$activation_keys[$ak_index] = '"' . $activation_key . '"';
-				}
-
-				$activation_keys = implode( ',', $activation_keys );
 				
-				$registrations = $wpdb->get_results( $wpdb->prepare( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" ) );
+				if ( is_multisite() ) {					
+					foreach( (array)$activation_keys as $ak_index => $activation_key ) {
+						$activation_keys[$ak_index] = '"' . $activation_key . '"';
+					}
+					$activation_keys = implode( ',', $activation_keys );
+					
+					$registrations = $wpdb->get_results( $wpdb->prepare( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" ) );
+				} else {
+					$registrations = array();
+					foreach ( (array)$activation_keys as $akey ) {
+						$user = $this->get_userdata_from_key( $akey );
+						
+						$registration = new stdClass;
+						$registration->user_email = $user->user_email;
+						$registration->activation_key = $user->user_activation_key; // todo: usermeta compat
+						
+						$registrations[] = $registration;
+					}
+				}
 
 				$updated_or_error = $get_key[0];
 				$message_type = $get_key[1];
