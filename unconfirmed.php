@@ -31,6 +31,11 @@ class BBG_Unconfirmed {
 	 * Users to be printed in the error/updated message box
 	 */
 	var $results_emails;
+	
+	/**
+	 * A utility value to allow multisite value to be filterable by plugin
+	 */
+	var $is_multisite;
 
 	/**
 	 * PHP 4 constructor
@@ -60,9 +65,12 @@ class BBG_Unconfirmed {
 	function __construct() {			
 		add_filter( 'boones_sortable_columns_keys_to_remove', array( $this, 'sortable_keys_to_remove' ) );
 		
-		$this->base_url = add_query_arg( 'page', 'unconfirmed', is_multisite() ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
+		// Multisite behavior? Configurable for plugins
+		$this->is_multisite = apply_filters( 'unconfirmed_is_multisite', is_multisite() );
 		
-		$admin_hook = apply_filters( 'unconfirmed_admin_hook', is_multisite() ? 'network_admin_menu' : 'admin_menu' );
+		$this->base_url = add_query_arg( 'page', 'unconfirmed', $this->is_multisite ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
+		
+		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $this->is_multisite ? 'network_admin_menu' : 'admin_menu' );
 		
 		add_action( $admin_hook, array( $this, 'add_admin_panel' ) );
 	}
@@ -165,7 +173,7 @@ class BBG_Unconfirmed {
 		extract( $r );
 		
 		// Our query will be different for multisite and for non-multisite
-		if ( is_multisite() ) {			
+		if ( $this->is_multisite ) {			
 			$sql['select'] 	= "SELECT * FROM $wpdb->signups";
 			$sql['where'] 	= "WHERE active = 0";
 			
@@ -310,7 +318,7 @@ class BBG_Unconfirmed {
 		$keys = $_GET['unconfirmed_key'];
 		
 		foreach( (array)$keys as $key ) { 
-			if ( is_multisite() ) {
+			if ( $this->is_multisite ) {
 				$result = wpmu_activate_signup( $key );
 			} else {
 				$user = $this->get_userdata_from_key( $key );
@@ -449,7 +457,7 @@ class BBG_Unconfirmed {
 			if ( 'updated' == $get_key[0] || 'error' == $get_key[0] ) {
 				$activation_keys = explode( ',', $activation_keys );
 				
-				if ( is_multisite() ) {					
+				if ( $this->is_multisite ) {					
 					foreach( (array)$activation_keys as $ak_index => $activation_key ) {
 						$activation_keys[$ak_index] = '"' . $activation_key . '"';
 					}
@@ -640,7 +648,7 @@ class BBG_Unconfirmed {
 		);
 		
 		// On non-multisite installations, we have the display name available. Show it.
-		if ( !is_multisite() ) {
+		if ( !$this->is_multisite ) {
 			$non_ms_cols = array(
 				array(
 					'name'	=> 'display_name',
@@ -746,7 +754,7 @@ class BBG_Unconfirmed {
 						</div>
 					</td>
 					
-					<?php if ( !is_multisite() ) : ?>
+					<?php if ( !$this->is_multisite ) : ?>
 						<td class="display_name">
 							<?php echo $user->display_name ?>
 						</td>
