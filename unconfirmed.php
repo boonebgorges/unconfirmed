@@ -8,7 +8,6 @@ Author: Boone B Gorges
 Author URI: http://boonebgorges.com
 Licence: GPLv3
 Version: 1.1
-Network: true
 */
 
 class BBG_Unconfirmed {
