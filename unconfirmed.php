@@ -275,6 +275,8 @@ class BBG_Unconfirmed {
 	 * @uses wpmu_activate_signup() WP's core function for user activation on Multisite
 	 */
 	function activate_user() {
+		global $wpdb;
+		
 		// Did you mean to do this? HMMM???
 		if ( isset( $_GET['unconfirmed_bulk'] ) )
 			check_admin_referer( 'unconfirmed_bulk_action' );
@@ -290,7 +292,26 @@ class BBG_Unconfirmed {
 		$keys = $_GET['unconfirmed_key'];
 		
 		foreach( (array)$keys as $key ) { 
-			$result = wpmu_activate_signup( $key );
+			if ( is_multisite() ) {
+				$result = wpmu_activate_signup( $key );
+			} else {
+				// The following is partially borrowed from BuddyPress
+				
+				// Activation key is stored either in wp_users > user_activation_key
+				// or in wp_usermeta. Look both places
+				if ( $user_id = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->users WHERE user_activation_key = %s", $key ) ) ) {
+					$key_loc = 'users';
+				} else if ( $user_id = $wpdb->get_var( $wpdb->prepare( "SELECT user_id FROM $wpdb->usermeta WHERE meta_key = 'activation_key' AND meta_value = %s", $key ) ) ) {
+					$key_loc = 'usermeta';
+				}
+		
+				if ( empty( $user_id ) )
+					return new WP_Error( 'invalid_key', __( 'Invalid activation key', 'unconfirmed' ) );
+		
+				// Change the user's status so they become active
+				if ( !$wpdb->query( $wpdb->prepare( "UPDATE $wpdb->users SET user_status = 0 WHERE ID = %d", $user_id ) ) )
+					return new WP_Error( 'invalid_key', __( 'Invalid activation key', 'unconfirmed' ) );
+			}
 			
 			if ( is_wp_error( $result ) )
 				$this->record_status( 'error_couldntactivate', $key );
@@ -385,7 +406,7 @@ class BBG_Unconfirmed {
 	function do_redirect() {
 		$query_vars = array( 'unconfirmed_complete' => '1' );
 		
-		foreach( $this->results as $status => $keys ) {
+		foreach( (array)$this->results as $status => $keys ) {
 			$query_vars[$status] = implode( ',', $keys );
 		}
 		
