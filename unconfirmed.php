@@ -330,10 +330,12 @@ class BBG_Unconfirmed {
 					return new WP_Error( 'invalid_key', __( 'Invalid activation key', 'unconfirmed' ) );
 			}
 			
-			if ( is_wp_error( $result ) )
+			if ( is_wp_error( $result ) ) {
 				$this->record_status( 'error_couldntactivate', $key );
-			else
-				$this->record_status( 'updated_activated', $key ); 
+			} else {
+				do_action( 'unconfirmed_user_activated', $user_id, $key );
+				$this->record_status( 'updated_activated', $key );
+			}
 		}
 	}
 	
