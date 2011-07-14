@@ -139,8 +139,15 @@ class BBG_Unconfirmed {
 		
 		/**
 		 * Override the $defaults with the following parameters:
-		 *   - 'orderby': Which column should determine the sort? Accepts: 'registered', 
-		 *     'user_login', 'user_email', 'activation_key'
+		 *   - 'orderby': Which column should determine the sort? Accepts: 
+		 *	  - 'registered' (MS) / 'user_registered' (non-MS) - These are translated to
+		 *	  	each other accordingly, depending on is_multisite(), so you don't
+		 *		have to be too careful about which one you pass
+		 *	  - 'user_login'
+		 *	  - 'user_email'
+		 *	  - 'activation_key' (MS) / 'user_activation_key' (non-MS) - As in the case
+		 *		of 'registered', this will be switched to the appropriate version
+		 *		automatically
 		 *   - 'order': In conjunction with 'orderby', how should users be sorted? Accepts:
 		 *     'desc', 'asc'
 		 *   - 'offset': Which user are we starting with? Eg for the third page of 10, use
@@ -157,12 +164,40 @@ class BBG_Unconfirmed {
 		$r = wp_parse_args( $args, $defaults );
 		extract( $r );
 		
-		$sql['select'] 	= "SELECT * FROM $wpdb->signups";
-		$sql['where'] 	= "WHERE active = 0";
-		
-		$sql['orderby'] = "ORDER BY " . $orderby;
-		$sql['order']	= strtoupper( $order );
-		$sql['limit']	= "LIMIT " . $offset . ", " . $number;
+		// Our query will be different for multisite and for non-multisite
+		if ( is_multisite() ) {			
+			$sql['select'] 	= "SELECT * FROM $wpdb->signups";
+			$sql['where'] 	= "WHERE active = 0";
+			
+			// Switch the non-MS orderby keys to their MS counterparts
+			if ( 'user_registered' == $orderby )
+				$orderby = 'registered';
+			else if ( 'user_activation_key' == $orderby )
+				$orderby = 'activation_key';
+				
+			$sql['orderby'] = "ORDER BY " . $orderby;
+			$sql['order']	= strtoupper( $order );
+			$sql['limit']	= "LIMIT " . $offset . ", " . $number;
+		} else {
+			// Stinky WP_User_Query doesn't allow filtering by user_status, so we must
+			// query wp_users directly. I should probably send a patch upstream to WP
+			$sql['select']  = "SELECT * FROM $wpdb->users";
+			
+			// The convention of using user_status = 2 for an unactivated user comes (I
+			// think) from BuddyPress. This will probably do nothing if you're not
+			// running BP.
+			$sql['where']   = "WHERE user_status = 2";
+				
+			// Switch the MS orderby keys to their non-MS counterparts
+			if ( 'registered' == $orderby )
+				$orderby = 'user_registered';
+			else if ( 'activation_key' == $orderby )
+				$orderby = 'user_activation_key';
+				
+			$sql['orderby'] = "ORDER BY " . $orderby;
+			$sql['order']	= strtoupper( $order );
+			$sql['limit']	= "LIMIT " . $offset . ", " . $number;
+		}
 		
 		// Get the resent counts
 		$resent_counts = get_site_option( 'unconfirmed_resent_counts' );
@@ -174,14 +209,30 @@ class BBG_Unconfirmed {
 		// Now loop through the users and unserialize their metadata for nice display
 		// Probably only necessary with BuddyPress
 		// We'll also use this opportunity to add the resent counts to the user objects
-		foreach( $users as $key => $user ) {
-			$meta = maybe_unserialize( $user->meta );
+		foreach( (array)$users as $key => $user ) {
+			
+			$meta = !empty( $user->meta ) ? maybe_unserialize( $user->meta ) : false;
 			
 			foreach( (array)$meta as $mkey => $mvalue ) {
 				$user->$mkey = $mvalue;
 			}
 			
-			$user->resent_count = isset( $resent_counts[$user->activation_key]  ) ? $resent_counts[$user->activation_key] : 0;
+			if ( isset( $user->activation_key ) ) {
+				// Multisite
+				$akey = $user->activation_key;
+			} else if ( isset( $user->user_activation_key ) ) {
+				// Non-multisite
+				$akey = $user->user_activation_key;
+				
+				// Normalize the $user for later display
+				$user->activation_key = $user->user_activation_key;
+				if ( $user->user_registered )
+					$user->registered = $user->user_registered;
+			}
+			
+			$akey = isset( $user->activation_key ) ? $user->activation_key : $user->user_activation_key;
+			
+			$user->resent_count = isset( $resent_counts[$akey] ) ? $resent_counts[$akey] : 0;
 			
 			$users[$key] = $user;
 		}
@@ -190,7 +241,7 @@ class BBG_Unconfirmed {
 		
 		// Gotta run a second query to get the overall pagination data
 		unset( $sql['limit'] );
-		$sql['select'] = "SELECT COUNT(*) FROM $wpdb->signups";
+		$sql['select'] = str_replace( "SELECT *", "SELECT COUNT(*)", $sql['select'] );
 		$total_query = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args, $r );
 		
 		$this->total_users = $wpdb->get_var( $wpdb->prepare( $total_query ) );
@@ -536,6 +587,22 @@ class BBG_Unconfirmed {
 			)
 		);
 		
+		// On non-multisite installations, we have the display name available. Show it.
+		if ( !is_multisite() ) {
+			$non_ms_cols = array(
+				array(
+					'name'	=> 'display_name',
+					'title'	=> __( 'Display Name', 'unconfirmed' )
+				)
+			);
+			
+			// Can't get array_splice to work right for this multi-d array, so I'm
+			// hacking around it
+			$col0 = array( $cols[0] );
+			$cols_rest = array_slice( $cols, 1 );
+			$cols = array_merge( $col0, $non_ms_cols, $cols_rest );
+		}
+		
 		$sortable = new BBG_CPT_Sort( $cols );
 		
 		$offset = $pagination->get_per_page * ( $pagination->get_paged - 1 );
@@ -626,6 +693,12 @@ class BBG_Unconfirmed {
 							
 						</div>
 					</td>
+					
+					<?php if ( !is_multisite() ) : ?>
+						<td class="display_name">
+							<?php echo $user->display_name ?>
+						</td>
+					<?php endif ?>
 					
 					<td class="email">
 						<?php echo $user->user_email ?>
