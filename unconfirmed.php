@@ -45,23 +45,26 @@ class BBG_Unconfirmed {
 	/**
 	 * PHP 5 constructor
 	 *
-	 * This function sets up a base url to use for URL concatenation throughout the plugin. It
-	 * also adds the admin menu with the network_admin_menu hook. At the moment, there appears
-	 * to be support for non-multisite installations, but at the moment it is only partial. I 
-	 * do not recommend that you bypass the is_multisite() check at the moment.
+	 * This function sets up a base url to use for URL concatenation throughout the plugin. 
+	 *
+	 * It also adds the admin menu with either the network_admin_menu or the admin_menu hook. By
+	 * default, the network_admin_hook is used on multisite installations, but you can alter
+	 * this behavior by filtering 'unconfirmed_admin_hook'.
 	 *
 	 * @package Unconfirmed
 	 * @since 1.0
+	 *
+	 * @uses apply_filters() Filter 'unconfirmed_admin_hook' to alter whether the admin menu
+	 *    goes in the Site Admin or Network Admin
 	 */
-	function __construct() {	
-		if ( !is_multisite() )
-			return;
-			
+	function __construct() {			
 		add_filter( 'boones_sortable_columns_keys_to_remove', array( $this, 'sortable_keys_to_remove' ) );
 		
 		$this->base_url = add_query_arg( 'page', 'unconfirmed', is_multisite() ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
 		
-		add_action( is_multisite() ? 'network_admin_menu' : 'admin_menu', array( $this, 'add_admin_panel' ) );
+		$admin_hook = apply_filters( 'unconfirmed_admin_hook', is_multisite() ? 'network_admin_menu' : 'admin_menu' );
+		
+		add_action( $admin_hook, array( $this, 'add_admin_panel' ) );
 	}
 
 	/**
