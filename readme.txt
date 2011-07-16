@@ -24,6 +24,10 @@ Please note that this plugin currently only works with WordPress Multisite, aka 
 
 == Changelog ==
 
+= 1.2 =
+* Adds 'Delete' buttons to remove registrations
+* Adds support for non-MS WordPress + BuddyPress
+
 = 1.1 =
 * Adds bulk resend/activate options
 * Adds a Resent Count column, to keep track of how many times an activation email has been resent to a given user
