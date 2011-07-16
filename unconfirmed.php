@@ -188,18 +188,18 @@ class BBG_Unconfirmed {
 		} else {
 			// Stinky WP_User_Query doesn't allow filtering by user_status, so we must
 			// query wp_users directly. I should probably send a patch upstream to WP
-			$sql['select']  = "SELECT * FROM $wpdb->users";
+			$sql['select']  = "SELECT u.*, um.meta_value AS activation_key FROM $wpdb->users u INNER JOIN $wpdb->usermeta um ON ( u.ID = um.user_id )";
 			
 			// The convention of using user_status = 2 for an unactivated user comes (I
 			// think) from BuddyPress. This will probably do nothing if you're not
 			// running BP.
-			$sql['where']   = "WHERE user_status = 2";
+			$sql['where']   = "WHERE u.user_status = 2 AND um.meta_key = 'activation_key'";
 				
 			// Switch the MS orderby keys to their non-MS counterparts
 			if ( 'registered' == $orderby )
 				$orderby = 'user_registered';
 			else if ( 'activation_key' == $orderby )
-				$orderby = 'user_activation_key';
+				$orderby = 'um.activation_key';
 				
 			$sql['orderby'] = "ORDER BY " . $orderby;
 			$sql['order']	= strtoupper( $order );
@@ -224,15 +224,13 @@ class BBG_Unconfirmed {
 				$user->$mkey = $mvalue;
 			}
 			
-			if ( isset( $user->activation_key ) ) {
+			if ( $this->is_multisite ) {
 				// Multisite
 				$akey = $user->activation_key;
-			} else if ( isset( $user->user_activation_key ) ) {
+			} else {
 				// Non-multisite
-				$akey = $user->user_activation_key;
+				$akey = $user->activation_key;
 				
-				// Normalize the $user for later display
-				$user->activation_key = $user->user_activation_key;
 				if ( $user->user_registered )
 					$user->registered = $user->user_registered;
 			}
