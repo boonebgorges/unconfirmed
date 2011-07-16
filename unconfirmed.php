@@ -80,20 +80,28 @@ class BBG_Unconfirmed {
 	 * When the admin submits an action like "activate" or "resend activation email", it will
 	 * ultimately result in a redirect. In order to minimize the amount of work done in the
 	 * interim page load (after the link is clicked but before the redirect happens), I check
-	 * for these actions (out of $_GET parameters) before the admin panel is even added to the
+	 * for these actions (out of $_REQUEST parameters) before the admin panel is even added to the
 	 * Dashboard.
 	 *
 	 * @package Unconfirmed
 	 * @since 1.0
 	 *
+	 * @uses BBG_Unconfirmed::delete_user() to delete registrations
 	 * @uses BBG_Unconfirmed::activate_user() to process manual activations
 	 * @uses BBG_Unconfirmed::resend_email() to process manual activations
 	 * @uses add_users_page() to add the admin panel underneath user.php
 	 */
-	function add_admin_panel() {
+	function add_admin_panel() {		
+		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
+		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
+		
 		// Look for actions first
-		if ( isset( $_GET['unconfirmed_action'] ) ) {			
-			switch ( $_GET['unconfirmed_action'] ) {
+		if ( isset( $_REQUEST['unconfirmed_action'] ) ) {
+			switch ( $_REQUEST['unconfirmed_action'] ) {
+				case 'delete' :
+					$this->delete_user();
+					break;
+				
 				case 'activate' :
 					$this->activate_user();					
 					break;
@@ -107,12 +115,9 @@ class BBG_Unconfirmed {
 			$this->do_redirect();
 		}
 		
-		if ( isset( $_GET['unconfirmed_complete'] ) ) {
+		if ( isset( $_REQUEST['unconfirmed_complete'] ) ) {
 			$this->setup_get_users();
 		}
-		
-		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
-		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
 	}
 	
 	/**
@@ -252,6 +257,7 @@ class BBG_Unconfirmed {
 		$this->total_users = $wpdb->get_var( $wpdb->prepare( $total_query ) );
 	}
 	
+	
 	function sortable_keys_to_remove( $keys ) {
 		$unconfirmed_keys = array(
 			'unconfirmed_complete',
@@ -307,18 +313,18 @@ class BBG_Unconfirmed {
 		global $wpdb;
 		
 		// Did you mean to do this? HMMM???
-		if ( isset( $_GET['unconfirmed_bulk'] ) )
+		if ( isset( $_REQUEST['unconfirmed_bulk'] ) )
 			check_admin_referer( 'unconfirmed_bulk_action' );
 		else 
 			check_admin_referer( 'unconfirmed_activate_user' );
 		
 		// Get the activation key(s) out of the URL params
-		if ( !isset( $_GET['unconfirmed_key'] ) ) {
+		if ( !isset( $_REQUEST['unconfirmed_key'] ) ) {
 			$this->record_status( 'error_nokey' );
 			return;
 		}
 		
-		$keys = $_GET['unconfirmed_key'];
+		$keys = $_REQUEST['unconfirmed_key'];
 		
 		foreach( (array)$keys as $key ) { 
 			if ( $this->is_multisite ) {
@@ -350,6 +356,67 @@ class BBG_Unconfirmed {
 		}
 	}
 	
+	function delete_user() {
+		global $wpdb;
+		
+		// Don't go there
+		if ( isset( $_REQUEST['unconfirmed_bulk'] ) )
+			check_admin_referer( 'unconfirmed_bulk_action' );
+		else 
+			check_admin_referer( 'unconfirmed_delete_user' );
+		
+		// Get the activation key(s) out of the URL params
+		if ( !isset( $_REQUEST['unconfirmed_key'] ) ) {
+			$this->record_status( 'error_nokey' );
+			return;
+		}
+		
+		$keys = $_REQUEST['unconfirmed_key'];
+		
+		foreach ( (array)$keys as $key ) {
+			if ( $this->is_multisite ) {
+				// Ensure the user exists before deleting, and pass the data along
+				// to a hook
+				$check = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
+				
+				if ( !$check ) {
+					$this->record_status( 'error_nouser' );
+					return;
+				} else {
+					do_action( 'unconfirmed_pre_user_delete', $key, $check );
+				}
+			
+				$delete_sql = apply_filters( 'unconfirmed_delete_sql', $wpdb->prepare( "DELETE FROM $wpdb->signups WHERE activation_key = %s", $key ), $key, $this->is_multisite );
+				$result = $wpdb->query( $delete_sql );
+			} else {
+				// Ensure the user exists before deleting, and pass the data along
+				// to a hook
+				$check = $this->get_userdata_from_key( $key );
+				
+				if ( !$check ) {
+					$this->record_status( 'error_nouser' );
+					return;
+				} else {
+					do_action( 'unconfirmed_pre_user_delete', $key, $check );
+				}
+				
+				$user_id = isset( $check->ID ) ? $check->ID : $check->user_id;
+				
+				$result = wp_delete_user( $user_id );
+			}
+			
+			if ( !$key )
+				$key = 0;
+			
+			if ( $result ) {
+				do_action( 'unconfirmed_user_deleted', $key, $check );
+				$this->record_status( 'updated_deleted', $key );
+			} else {
+				$this->record_status( 'error_couldntdelete', $key );
+			}
+		}
+	}
+	
 	/**
 	 * Resends an activation email
 	 *
@@ -366,34 +433,39 @@ class BBG_Unconfirmed {
 		global $wpdb;
 		
 		// Hubba hubba
-		if ( isset( $_GET['unconfirmed_bulk'] ) )
+		if ( isset( $_REQUEST['unconfirmed_bulk'] ) )
 			check_admin_referer( 'unconfirmed_bulk_action' );
 		else
 			check_admin_referer( 'unconfirmed_resend_email' );
 		
 		// Get the user's activation key out of the URL params
-		if ( !isset( $_GET['unconfirmed_key'] ) ) {
+		if ( !isset( $_REQUEST['unconfirmed_key'] ) ) {
 			$this->record_status( 'error_nokey' );
 			return;
 		}
 		
 		$resent_counts = get_site_option( 'unconfirmed_resent_counts' );
 		
-		$keys = $_GET['unconfirmed_key'];
+		$keys = $_REQUEST['unconfirmed_key'];
 		
-		foreach( (array)$keys as $key ) { 			
-			$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
+		foreach( (array)$keys as $key ) {
+			if ( $this->is_multisite )
+				$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->signups WHERE activation_key = %s", $key ) );
+			else
+				$user = $this->get_userdata_from_key( $key );
 				
 			if ( !$user ) {
 				$this->record_status( 'error_nouser', $key );
 				continue;
 			}
 			
-			// We use a different email function depending on whether they registered with blog
-			if ( !empty( $user->domain ) ) {
-				wpmu_signup_blog_notification( $user->domain, $user->path, $user->title, $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
-			} else {
-				wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+			if ( $this->is_multisite ) {				
+				// We use a different email function depending on whether they registered with blog
+				if ( !empty( $user->domain ) ) {
+					wpmu_signup_blog_notification( $user->domain, $user->path, $user->title, $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+				} else {
+					wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
+				}
 			}
 			
 			if ( isset( $resent_counts[$key] ) ) {
@@ -454,7 +526,7 @@ class BBG_Unconfirmed {
 	function setup_get_users() {
 		global $wpdb;
 		
-		foreach( $_GET as $get_key => $activation_keys ) {
+		foreach( $_REQUEST as $get_key => $activation_keys ) {
 			$get_key = explode( '_', $get_key );
 			
 			if ( 'updated' == $get_key[0] || 'error' == $get_key[0] ) {
@@ -473,8 +545,8 @@ class BBG_Unconfirmed {
 						$user = $this->get_userdata_from_key( $akey );
 						
 						$registration = new stdClass;
-						$registration->user_email = $user->user_email;
-						$registration->activation_key = $user->user_activation_key; // todo: usermeta compat
+						$registration->user_email = isset( $user->user_email ) ? $user->user_email : '';
+						$registration->activation_key = isset( $user->user_activation_key ) ? $user->user_activation_key : ''; // todo: usermeta compat
 						
 						$registrations[] = $registration;
 					}
@@ -513,6 +585,8 @@ class BBG_Unconfirmed {
 						
 					}
 					
+					$message = '';
+					
 					switch ( $message_type ) {
 						case 'activated' :
 							$message = sprintf( __( 'You successfully activated the following users: %s', 'unconfirmed' ), $emails );
@@ -520,6 +594,13 @@ class BBG_Unconfirmed {
 						
 						case 'resent' :
 							$message = sprintf( __( 'You successfully resent activation emails to the following users: %s', 'unconfirmed' ), $emails );
+							break;
+						
+						case 'deleted' :
+							if ( count( $registrations ) > 1 ) 
+								$message = __( 'Users successfully deleted.', 'unconfirmed' );
+							else
+								$message = __( 'User successfully deleted.', 'unconfirmed' );
 							break;
 							
 						default :
@@ -697,7 +778,7 @@ class BBG_Unconfirmed {
 		
 		<?php $this->render_messages() ?>
 		
-		<form action="" method="get">
+		<form action="<?php echo $this->base_url ?>" method="post">
 		
 		<?php if ( !empty( $this->users ) ) : ?>
 			<div class="tablenav top">
@@ -705,6 +786,7 @@ class BBG_Unconfirmed {
 					<select name="unconfirmed_action">
 						<option value="resend"><?php _e( 'Resend Activation Email', 'unconfirmed' ) ?>&nbsp;&nbsp;</option>
 						<option value="activate"><?php _e( 'Activate', 'unconfirmed' ) ?></option>
+						<option value="delete"><?php _e( 'Delete', 'unconfirmed' ) ?></option>
 					</select>
 					
 					<input id="doaction" class="button-secondary action" type="submit" value="<?php _e( 'Apply', 'unconfirmed' ) ?>" />
@@ -751,8 +833,12 @@ class BBG_Unconfirmed {
 						
 						<div class="row-actions">
 							<span class="edit"><a class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'unconfirmed_action' => 'resend', 'unconfirmed_key' => $user->activation_key ), $this->base_url ), 'unconfirmed_resend_email' ) ?>"><?php _e( 'Resend Activation Email', 'unconfirmed' ) ?></a></span>
+							
 							&nbsp;&nbsp;
-							<span class="delete"><a class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'unconfirmed_action' => 'activate', 'unconfirmed_key' => $user->activation_key ), $this->base_url ), 'unconfirmed_activate_user' ) ?>"><?php _e( 'Activate', 'unconfirmed' ) ?></a></span>
+							<span class="edit"><a class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'unconfirmed_action' => 'activate', 'unconfirmed_key' => $user->activation_key ), $this->base_url ), 'unconfirmed_activate_user' ) ?>"><?php _e( 'Activate', 'unconfirmed' ) ?></a></span>
+							
+							&nbsp;&nbsp;
+							<span class="delete"><a title="<?php _e( 'Deleting a registration means that it will be removed from the database, and the user will be unable to activate his account. Proceed with caution!', 'unconfirmed' ) ?>" class="confirm" href="<?php echo wp_nonce_url( add_query_arg( array( 'unconfirmed_action' => 'delete', 'unconfirmed_key' => $user->activation_key ), $this->base_url ), 'unconfirmed_delete_user' ) ?>"><?php _e( 'Delete', 'unconfirmed' ) ?></a></span>
 							
 						</div>
 					</td>
