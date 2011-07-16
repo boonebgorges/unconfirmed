@@ -329,6 +329,7 @@ class BBG_Unconfirmed {
 		foreach( (array)$keys as $key ) { 
 			if ( $this->is_multisite ) {
 				$result = wpmu_activate_signup( $key );
+				$user_id = !is_wp_error( $result ) && isset( $result['user_id'] ) ? $result['user_id'] : 0;
 			} else {
 				$user = $this->get_userdata_from_key( $key );
 				
@@ -356,6 +357,12 @@ class BBG_Unconfirmed {
 		}
 	}
 	
+	/**
+	 * Deletes an unactivated registration
+	 *
+	 * @package Unconfirmed
+	 * @since 1.2
+	 */
 	function delete_user() {
 		global $wpdb;
 		
@@ -598,9 +605,9 @@ class BBG_Unconfirmed {
 						
 						case 'deleted' :
 							if ( count( $registrations ) > 1 ) 
-								$message = __( 'Users successfully deleted.', 'unconfirmed' );
+								$message = __( 'Registrations successfully deleted.', 'unconfirmed' );
 							else
-								$message = __( 'User successfully deleted.', 'unconfirmed' );
+								$message = __( 'Registration successfully deleted.', 'unconfirmed' );
 							break;
 							
 						default :
