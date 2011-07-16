@@ -268,13 +268,19 @@ class BBG_Unconfirmed {
 		return $keys;
 	}
 	
+	/**
+	 * Get userdata from an activation key, when using WP single
+	 *
+	 * For maximum flexibility, this method looks both in the user_activation_key column of
+	 * wp_users (rarely used) and the activation_key usermeta row (used by BP).
+	 *
+	 * Part of the function is borrowed from BP itself.
+	 *
+	 * @package Unconfirmed
+	 * @since 1.2
+	 */
 	function get_userdata_from_key( $key ) {
 		global $wpdb;
-		
-		// The following is partially borrowed from BuddyPress
-				
-		// Activation key is stored either in wp_users > user_activation_key
-		// or in wp_usermeta. Look both places
 		
 		if ( $user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE user_activation_key = %s", $key ) ) ) {
 			$key_loc = 'users';
