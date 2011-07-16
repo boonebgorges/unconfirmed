@@ -473,6 +473,12 @@ class BBG_Unconfirmed {
 				} else {
 					wpmu_signup_user_notification( $user->user_login, $user->user_email, $user->activation_key, maybe_unserialize( $user->meta ) );
 				}
+			} else {
+				// If you're running BP on a non-multisite instance of WP, use the
+				// BP function to send the email
+				if ( function_exists( 'bp_core_signup_send_validation_email' ) ) {
+					bp_core_signup_send_validation_email( $user->ID, $user->user_email, $key );
+				}
 			}
 			
 			if ( isset( $resent_counts[$key] ) ) {
