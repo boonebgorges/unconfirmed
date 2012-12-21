@@ -186,10 +186,10 @@ class BBG_Unconfirmed {
 				$orderby = 'registered';
 			else if ( 'user_activation_key' == $orderby )
 				$orderby = 'activation_key';
-				
-			$sql['orderby'] = "ORDER BY " . $orderby;
+
+			$sql['orderby'] = $wpdb->prepare( "ORDER BY %s", $orderby );
 			$sql['order']	= strtoupper( $order );
-			$sql['limit']	= "LIMIT " . $offset . ", " . $number;
+			$sql['limit']	= $wpdb->prepare( "LIMIT %d, %d", $offset, $number );
 		} else {
 			// Stinky WP_User_Query doesn't allow filtering by user_status, so we must
 			// query wp_users directly. I should probably send a patch upstream to WP
@@ -205,10 +205,10 @@ class BBG_Unconfirmed {
 				$orderby = 'user_registered';
 			else if ( 'activation_key' == $orderby )
 				$orderby = 'um.activation_key';
-				
-			$sql['orderby'] = "ORDER BY " . $orderby;
+
+			$sql['orderby'] = $wpdb->prepare( "ORDER BY %s", $orderby );
 			$sql['order']	= strtoupper( $order );
-			$sql['limit']	= "LIMIT " . $offset . ", " . $number;
+			$sql['limit']	= $wpdb->prepare( "LIMIT %d, %d", $offset, $number );
 		}
 		
 		// Get the resent counts
@@ -216,8 +216,8 @@ class BBG_Unconfirmed {
 		
 		$paged_query = apply_filters( 'unconfirmed_paged_query', join( ' ', $sql ), $sql, $args, $r );
 
-		$users = $wpdb->get_results( $wpdb->prepare( $paged_query ) );		
-		
+		$users = $wpdb->get_results( $paged_query );
+
 		// Now loop through the users and unserialize their metadata for nice display
 		// Probably only necessary with BuddyPress
 		// We'll also use this opportunity to add the resent counts to the user objects
@@ -253,8 +253,8 @@ class BBG_Unconfirmed {
 		unset( $sql['limit'] );
 		$sql['select'] = str_replace( "SELECT *", "SELECT COUNT(*)", $sql['select'] );
 		$total_query = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args, $r );
-		
-		$this->total_users = $wpdb->get_var( $wpdb->prepare( $total_query ) );
+
+		$this->total_users = $wpdb->get_var( $total_query );
 	}
 	
 	
