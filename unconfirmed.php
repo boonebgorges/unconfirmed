@@ -251,7 +251,7 @@ class BBG_Unconfirmed {
 
 		// Gotta run a second query to get the overall pagination data
 		unset( $sql['limit'] );
-		$sql['select'] = str_replace( "SELECT *", "SELECT COUNT(*)", $sql['select'] );
+		$sql['select'] = preg_replace( "/SELECT.*?FROM/", "SELECT COUNT(*) FROM", $sql['select'] );
 		$total_query = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args, $r );
 
 		$this->total_users = $wpdb->get_var( $total_query );
