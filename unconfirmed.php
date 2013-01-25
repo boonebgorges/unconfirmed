@@ -95,6 +95,8 @@ class BBG_Unconfirmed {
 		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
 
+		if ( $_REQUEST['performed_search'] == '1' ) return;
+
 		// Look for actions first
 		if ( isset( $_REQUEST['unconfirmed_action'] ) ) {
 			switch ( $_REQUEST['unconfirmed_action'] ) {
@@ -199,6 +201,11 @@ class BBG_Unconfirmed {
 			// think) from BuddyPress. This will probably do nothing if you're not
 			// running BP.
 			$sql['where']   = "WHERE u.user_status = 2 AND um.meta_key = 'activation_key'";
+
+			if ( !empty( $_REQUEST['s'] ) ) {
+				$search_text = "%" . like_escape( $_REQUEST['s'] ) . "%";
+				$sql['where'] .= $wpdb->prepare( " AND ( u.user_login LIKE %s OR u.user_email LIKE %s OR u.display_name LIKE %s )", $search_text, $search_text, $search_text );
+			}
 
 			// Switch the MS orderby keys to their non-MS counterparts
 			if ( 'registered' == $orderby )
@@ -792,6 +799,13 @@ class BBG_Unconfirmed {
 		<?php $this->render_messages() ?>
 
 		<form action="<?php echo $this->base_url ?>" method="post">
+
+		<p class="search-box">
+			<label class="screen-reader-text" for="unconfirmed-search-input">Search:</label>
+			<input type="search" id="unconfirmed-search-input" name="s" value="<?php if ( !empty( $_REQUEST['s'] ) ) echo $_REQUEST['s']; ?>">
+			<input type="hidden" id="unconfirmed-performed-search-input" name="performed_search" value="0">
+			<input type="submit" name="search_submit" id="search-submit" class="button" value="Search" onclick="document.getElementById('unconfirmed-performed-search-input').value = '1';">
+		</p>
 
 		<?php if ( !empty( $this->users ) ) : ?>
 			<div class="tablenav top">
