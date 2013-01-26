@@ -62,6 +62,8 @@ class BBG_Unconfirmed {
 	 *    goes in the Site Admin or Network Admin
 	 */
 	function __construct() {
+		add_filter( 'bbg_cpt_pag_add_args', array( $this, 'add_args' ) );
+
 		add_filter( 'boones_sortable_columns_keys_to_remove', array( $this, 'sortable_keys_to_remove' ) );
 
 		// Multisite behavior? Configurable for plugins
@@ -94,6 +96,8 @@ class BBG_Unconfirmed {
 	function add_admin_panel() {
 		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
+
+		if ( isset( $_REQUEST['performed_search'] ) && $_REQUEST['performed_search'] == '1' ) return;
 
 		// Look for actions first
 		if ( isset( $_REQUEST['unconfirmed_action'] ) ) {
@@ -528,6 +532,16 @@ class BBG_Unconfirmed {
 		$redirect_url = add_query_arg( $query_vars, $this->base_url );
 
 		wp_redirect( $redirect_url );
+	}
+
+	function add_args( $add_args ) {
+		if ( !empty( $_REQUEST['s'] ) ) {
+			$search_text = urlencode( $_REQUEST['s'] );
+			$add_args[ 's' ] = $search_text;
+		} else {
+			$add_args[ 's' ] = '';
+		}
+		return $add_args;
 	}
 
 	/**
