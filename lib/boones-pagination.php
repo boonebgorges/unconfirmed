@@ -220,7 +220,8 @@ class BBG_CPT_Pag {
 	 * @param str $type Optional. 'echo' will echo the results, anything else will return them
 	 * @return str $page_links The pagination links
 	 */
-	function paginate_links( $type = 'echo' ) {	 
+	function paginate_links( $type = 'echo' ) {
+		$add_args = apply_filters( 'bbg_cpt_pag_add_args' , array( $this->get_per_page_key => $this->get_per_page ) );
 		$page_links = paginate_links( array(
 			'base' 		=> add_query_arg( $this->get_paged_key, '%#%' ),
 			'format' 	=> '',
@@ -228,7 +229,7 @@ class BBG_CPT_Pag {
 			'next_text' 	=> __( '&raquo;' ),
 			'total' 	=> $this->total_pages,
 			'current' 	=> $this->get_paged,
-			'add_args'	=> array( $this->get_per_page_key => $this->get_per_page )
+			'add_args'	=> $add_args
 		));
 		
 		if ( 'echo' == $type )
