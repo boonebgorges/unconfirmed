@@ -97,7 +97,7 @@ class BBG_Unconfirmed {
 		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
 
-		if ( $_REQUEST['performed_search'] == '1' ) return;
+		if ( isset( $_REQUEST['performed_search'] ) && $_REQUEST['performed_search'] == '1' ) return;
 
 		// Look for actions first
 		if ( isset( $_REQUEST['unconfirmed_action'] ) ) {
