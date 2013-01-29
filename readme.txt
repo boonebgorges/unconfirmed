@@ -22,6 +22,9 @@ Unconfirmed creates a Dashboard panel under the Users menu (Network Admin > User
 
 == Changelog ==
 
+= 1.3 =
+* Adds user search
+
 = 1.2.2 =
 * Fixes pagination count for non-MS installations
 
