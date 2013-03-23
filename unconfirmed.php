@@ -443,7 +443,7 @@ class BBG_Unconfirmed {
 	 * @since 1.0
 	 *
 	 * @uses wpmu_signup_blog_notification() to notify users who signed up with a blog
-	 * @uses wpmu_signup_blog_notification() to notify users who signed up without a blog
+	 * @uses wpmu_signup_user_notification() to notify users who signed up without a blog
 	 */
 	function resend_email() {
 		global $wpdb;
