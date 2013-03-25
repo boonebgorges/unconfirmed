@@ -3,8 +3,8 @@ Contributors: boonebgorges, cuny-academic-commons
 Donate link: http://teleogistic.net/donate
 Tags: multisite, network, activate, activation, email
 Requires at least: WordPress 3.1 
-Tested up to: WordPress 3.5
-Stable tag: 1.2.2
+Tested up to: WordPress 3.5.1
+Stable tag: 1.2.3
 
 Allows WordPress admins to manage unactivated users, by activating them manually, deleting their pending registrations, or resending the activation email.
 
