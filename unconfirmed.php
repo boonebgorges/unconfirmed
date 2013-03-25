@@ -551,7 +551,7 @@ class BBG_Unconfirmed {
 					}
 					$activation_keys = implode( ',', $activation_keys );
 
-					$registrations = $wpdb->get_results( $wpdb->prepare( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" ) );
+					$registrations = $wpdb->get_results( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" );
 				} else {
 					$registrations = array();
 					foreach ( (array)$activation_keys as $akey ) {
