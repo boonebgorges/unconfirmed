@@ -22,6 +22,10 @@ Unconfirmed creates a Dashboard panel under the Users menu (Network Admin > User
 
 == Changelog ==
 
+= 1.2.3 =
+* Allows searching
+* Better support for WP 3.5+
+
 = 1.2.2 =
 * Fixes pagination count for non-MS installations
 
