@@ -934,7 +934,13 @@ class BBG_Unconfirmed {
 	}
 }
 
-$bbg_unconfirmed = new BBG_Unconfirmed;
+function BBG_Unconfirmed() {
+	global $bbg_unconfirmed;
 
+	if ( empty( $bbg_unconfirmed ) ) {
+		$bbg_unconfirmed = new BBG_Unconfirmed;
+	}
 
-?>
+	return $bbg_unconfirmed;
+}
+add_action( 'plugins_loaded', 'BBG_Unconfirmed' );
