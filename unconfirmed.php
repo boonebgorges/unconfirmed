@@ -566,7 +566,7 @@ class BBG_Unconfirmed {
 
 				if ( $this->is_multisite ) {
 					foreach( (array)$activation_keys as $ak_index => $activation_key ) {
-						$activation_keys[$ak_index] = '"' . $activation_key . '"';
+						$activation_keys[$ak_index] = '"' . sanitize_text_field( $activation_key ) . '"';
 					}
 					$activation_keys = implode( ',', $activation_keys );
 
