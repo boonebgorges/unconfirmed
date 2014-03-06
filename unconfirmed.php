@@ -566,11 +566,11 @@ class BBG_Unconfirmed {
 
 				if ( $this->is_multisite ) {
 					foreach( (array)$activation_keys as $ak_index => $activation_key ) {
-						$activation_keys[$ak_index] = '"' . $activation_key . '"';
+						$activation_keys[$ak_index] = '"' . sanitize_text_field( $activation_key ) . '"';
 					}
 					$activation_keys = implode( ',', $activation_keys );
 
-					$registrations = $wpdb->get_results( $wpdb->prepare( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" ) );
+					$registrations = $wpdb->get_results( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" );
 				} else {
 					$registrations = array();
 					foreach ( (array)$activation_keys as $akey ) {
@@ -934,7 +934,13 @@ class BBG_Unconfirmed {
 	}
 }
 
-$bbg_unconfirmed = new BBG_Unconfirmed;
+function BBG_Unconfirmed() {
+	global $bbg_unconfirmed;
 
+	if ( empty( $bbg_unconfirmed ) ) {
+		$bbg_unconfirmed = new BBG_Unconfirmed;
+	}
 
-?>
+	return $bbg_unconfirmed;
+}
+add_action( 'plugins_loaded', 'BBG_Unconfirmed' );
