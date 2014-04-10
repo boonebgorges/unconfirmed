@@ -7,7 +7,7 @@ Description: Allows admins on a WordPress Multisite network to manage unactivate
 Author: Boone B Gorges
 Author URI: http://boonebgorges.com
 Licence: GPLv3
-Version: 1.2.2
+Version: 1.2.5
 */
 
 class BBG_Unconfirmed {
@@ -37,16 +37,6 @@ class BBG_Unconfirmed {
 	var $is_multisite;
 
 	/**
-	 * PHP 4 constructor
-	 *
-	 * @package Unconfirmed
-	 * @since 1.0
-	 */
-	function bbg_unconfirmed() {
-		$this->__construct();
-	}
-
-	/**
 	 * PHP 5 constructor
 	 *
 	 * This function sets up a base url to use for URL concatenation throughout the plugin.
@@ -74,6 +64,16 @@ class BBG_Unconfirmed {
 		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $this->is_multisite ? 'network_admin_menu' : 'admin_menu' );
 
 		add_action( $admin_hook, array( $this, 'add_admin_panel' ) );
+	}
+
+	/**
+	 * PHP 4 constructor
+	 *
+	 * @package Unconfirmed
+	 * @since 1.0
+	 */
+	function bbg_unconfirmed() {
+		$this->__construct();
 	}
 
 	/**
@@ -814,7 +814,7 @@ class BBG_Unconfirmed {
 
 		<p class="search-box">
 			<label class="screen-reader-text" for="unconfirmed-search-input">Search:</label>
-			<input type="search" id="unconfirmed-search-input" name="s" value="<?php if ( !empty( $_REQUEST['s'] ) ) echo $_REQUEST['s']; ?>">
+			<input type="search" id="unconfirmed-search-input" name="s" value="<?php if ( !empty( $_REQUEST['s'] ) ) echo esc_attr( $_REQUEST['s'] ); ?>">
 			<input type="hidden" id="unconfirmed-performed-search-input" name="performed_search" value="0">
 			<input type="submit" name="search_submit" id="search-submit" class="button" value="Search" onclick="document.getElementById('unconfirmed-performed-search-input').value = '1';">
 		</p>
