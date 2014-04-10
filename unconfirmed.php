@@ -814,7 +814,7 @@ class BBG_Unconfirmed {
 
 		<p class="search-box">
 			<label class="screen-reader-text" for="unconfirmed-search-input">Search:</label>
-			<input type="search" id="unconfirmed-search-input" name="s" value="<?php if ( !empty( $_REQUEST['s'] ) ) echo $_REQUEST['s']; ?>">
+			<input type="search" id="unconfirmed-search-input" name="s" value="<?php if ( !empty( $_REQUEST['s'] ) ) echo esc_attr( $_REQUEST['s'] ); ?>">
 			<input type="hidden" id="unconfirmed-performed-search-input" name="performed_search" value="0">
 			<input type="submit" name="search_submit" id="search-submit" class="button" value="Search" onclick="document.getElementById('unconfirmed-performed-search-input').value = '1';">
 		</p>
