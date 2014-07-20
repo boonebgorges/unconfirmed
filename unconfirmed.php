@@ -170,10 +170,21 @@ class BBG_Unconfirmed {
 		$r = wp_parse_args( $args, $defaults );
 		extract( $r );
 
+		$search = isset( $_REQUEST['s'] ) ? wp_unslash( trim( $_REQUEST['s'] ) ) : '';
+
 		// Our query will be different for multisite and for non-multisite
 		if ( $this->is_multisite ) {
 			$sql['select'] 	= "SELECT * FROM $wpdb->signups";
 			$sql['where'] 	= "WHERE active = 0";
+
+			if ( ! empty( $search ) ) {
+				if ( method_exists( $wpdb, 'esc_like' ) ) { // WP >= 4.0.0
+					$search_text = "%" . $wpdb->esc_like( $search ) . "%";
+				} else {
+					$search_text = "%" . like_escape( $search ) . "%";
+				}
+				$sql['where'] .= $wpdb->prepare( " AND ( user_login LIKE %s OR user_email LIKE %s )", $search_text, $search_text );
+			}
 
 			// Switch the non-MS orderby keys to their MS counterparts
 			if ( 'user_registered' == $orderby )
@@ -194,8 +205,12 @@ class BBG_Unconfirmed {
 			// running BP.
 			$sql['where']   = "WHERE u.user_status = 2 AND um.meta_key = 'activation_key'";
 
-			if ( !empty( $_REQUEST['s'] ) ) {
-				$search_text = "%" . like_escape( $_REQUEST['s'] ) . "%";
+			if ( ! empty( $search ) ) {
+				if ( method_exists( $wpdb, 'esc_like' ) ) { // WP >= 4.0.0
+					$search_text = "%" . $wpdb->esc_like( $search ) . "%";
+				} else {
+					$search_text = "%" . like_escape( $search ) . "%";
+				}
 				$sql['where'] .= $wpdb->prepare( " AND ( u.user_login LIKE %s OR u.user_email LIKE %s OR u.display_name LIKE %s )", $search_text, $search_text, $search_text );
 			}
 
