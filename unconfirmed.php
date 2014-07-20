@@ -37,7 +37,7 @@ class BBG_Unconfirmed {
 	var $is_multisite;
 
 	/**
-	 * PHP 5 constructor
+	 * Constructor.
 	 *
 	 * This function sets up a base url to use for URL concatenation throughout the plugin.
 	 *
@@ -64,16 +64,6 @@ class BBG_Unconfirmed {
 		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $this->is_multisite ? 'network_admin_menu' : 'admin_menu' );
 
 		add_action( $admin_hook, array( $this, 'add_admin_panel' ) );
-	}
-
-	/**
-	 * PHP 4 constructor
-	 *
-	 * @package Unconfirmed
-	 * @since 1.0
-	 */
-	function bbg_unconfirmed() {
-		$this->__construct();
 	}
 
 	/**
