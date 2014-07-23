@@ -22,6 +22,9 @@ Unconfirmed creates a Dashboard panel under the Users menu (Network Admin > User
 
 == Changelog ==
 
+= 1.2.6 =
+* Removed PHP4 constructors from boones-* libraries, to avoid PHP notices
+
 = 1.2.5 =
 * Improved protection against XSS
 
