@@ -27,17 +27,7 @@ class BBG_CPT_Pag {
 	var $total_pages;
 
 	/**
-	 * PHP 4 constructor
-	 *
-	 * @package Boone's Pagination
-	 * @since 1.0
-	 */
-	function bbg_cpt_pag() {
-		$this->__construct();
-	}
-
-	/**
-	 * PHP 5 constructor
+	 * Constructor.
 	 *
 	 * @package Boone's Pagination
 	 * @since 1.0
