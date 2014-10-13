@@ -3,8 +3,8 @@ Contributors: boonebgorges, cuny-academic-commons
 Donate link: http://teleogistic.net/donate
 Tags: multisite, network, activate, activation, email
 Requires at least: WordPress 3.1
-Tested up to: WordPress 3.9.1
-Stable tag: 1.2.6
+Tested up to: WordPress 4.0
+Stable tag: 1.2.7
 
 Allows WordPress admins to manage unactivated users, by activating them manually, deleting their pending registrations, or resending the activation email.
 
@@ -21,6 +21,9 @@ Unconfirmed creates a Dashboard panel under the Users menu (Network Admin > User
 1. Navigate to Network Admin > Users > Unconfirmed
 
 == Changelog ==
+
+= 1.2.7 =
+* Better loading of assets over SSL
 
 = 1.2.6 =
 * Removed PHP4 constructors from boones-* libraries, to avoid PHP notices
