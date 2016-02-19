@@ -22,6 +22,11 @@ Unconfirmed creates a Dashboard panel under the Users menu (Network Admin > User
 
 == Changelog ==
 
+= 1.3 =
+* Use custom 'moderate_signups' cap instead of 'create_users' when adding Unconfirmed panel
+* Add fine-grained filter for whether to use the Network Admin
+* Fix ordering in Multisite
+
 = 1.2.7 =
 * Better loading of assets over SSL
 
