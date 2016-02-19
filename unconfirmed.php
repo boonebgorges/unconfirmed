@@ -224,7 +224,7 @@ class BBG_Unconfirmed {
 			else if ( 'user_activation_key' == $orderby )
 				$orderby = 'activation_key';
 
-			$sql['orderby'] = $wpdb->prepare( "ORDER BY %s", $orderby );
+			$sql['orderby'] = "ORDER BY $orderby";
 			$sql['order']	= strtoupper( $order );
 			$sql['limit']	= $wpdb->prepare( "LIMIT %d, %d", $offset, $number );
 		} else {
