@@ -61,9 +61,18 @@ class BBG_Unconfirmed {
 		// Multisite behavior? Configurable for plugins
 		$this->is_multisite = apply_filters( 'unconfirmed_is_multisite', is_multisite() );
 
-		$this->base_url = add_query_arg( 'page', 'unconfirmed', $this->is_multisite ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
+		/**
+		 * Should the Unconfirmed panel appear in the Network admin?
+		 *
+		 * @since 1.3
+		 *
+		 * @param bool $do_network_admin
+		 */
+		$do_network_admin = apply_filters( 'unconfirmed_do_network_admin', $this->is_multisite );
 
-		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $this->is_multisite ? 'network_admin_menu' : 'admin_menu' );
+		$this->base_url = add_query_arg( 'page', 'unconfirmed', $do_network_admin ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
+
+		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $do_network_admin ? 'network_admin_menu' : 'admin_menu' );
 
 		add_action( $admin_hook, array( $this, 'add_admin_panel' ) );
 	}
