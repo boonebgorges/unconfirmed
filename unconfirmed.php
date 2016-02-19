@@ -7,7 +7,7 @@ Description: Allows admins on a WordPress Multisite network to manage unactivate
 Author: Boone B Gorges
 Author URI: http://boone.gorg.es
 License: GPLv3
-Version: 1.2.7
+Version: 1.3
 */
 
 class BBG_Unconfirmed {
