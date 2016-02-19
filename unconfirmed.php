@@ -5,9 +5,9 @@ Plugin Name: Unconfirmed
 Plugin URI: http://github.com/boonebgorges/unconfirmed
 Description: Allows admins on a WordPress Multisite network to manage unactivated users, by either activating them manually or resending the activation email.
 Author: Boone B Gorges
-Author URI: http://boonebgorges.com
-Licence: GPLv3
-Version: 1.2.7
+Author URI: http://boone.gorg.es
+License: GPLv3
+Version: 1.3
 */
 
 class BBG_Unconfirmed {
@@ -56,12 +56,23 @@ class BBG_Unconfirmed {
 
 		add_filter( 'boones_sortable_columns_keys_to_remove', array( $this, 'sortable_keys_to_remove' ) );
 
+		add_filter( 'map_meta_cap', array( $this, 'map_moderate_signups_cap' ), 10, 4 );
+
 		// Multisite behavior? Configurable for plugins
 		$this->is_multisite = apply_filters( 'unconfirmed_is_multisite', is_multisite() );
 
-		$this->base_url = add_query_arg( 'page', 'unconfirmed', $this->is_multisite ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
+		/**
+		 * Should the Unconfirmed panel appear in the Network admin?
+		 *
+		 * @since 1.3
+		 *
+		 * @param bool $do_network_admin
+		 */
+		$do_network_admin = apply_filters( 'unconfirmed_do_network_admin', $this->is_multisite );
 
-		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $this->is_multisite ? 'network_admin_menu' : 'admin_menu' );
+		$this->base_url = add_query_arg( 'page', 'unconfirmed', $do_network_admin ? network_admin_url( 'users.php' ) : admin_url( 'users.php' ) );
+
+		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $do_network_admin ? 'network_admin_menu' : 'admin_menu' );
 
 		add_action( $admin_hook, array( $this, 'add_admin_panel' ) );
 	}
@@ -84,7 +95,7 @@ class BBG_Unconfirmed {
 	 * @uses add_users_page() to add the admin panel underneath user.php
 	 */
 	function add_admin_panel() {
-		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
+		$page = add_submenu_page( 'users.php', __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'moderate_signups', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
 
 		if ( isset( $_REQUEST['performed_search'] ) && $_REQUEST['performed_search'] == '1' ) return;
@@ -124,6 +135,27 @@ class BBG_Unconfirmed {
 	 */
 	function add_admin_styles() {
 		wp_enqueue_style( 'unconfirmed-css', plugins_url( 'css/style.css', __FILE__ ) );
+	}
+
+	/**
+	 * Map the 'moderate_signups' cap.
+	 *
+	 * 'moderate_signups' is the custom capability used by Unconfirmed for management of signups.
+	 * By default, we map this to 'create_users', but it is possible to override.
+	 *
+	 * @since 1.3
+	 *
+	 * @param array  $caps
+	 * @param string $cap
+	 * @param int    $user_id
+	 * @param array  $args
+	 */
+	public function map_moderate_signups_cap( $caps, $cap, $user_id, $args ) {
+		if ( 'moderate_signups' === $cap ) {
+			$caps = array( 'create_users' );
+		}
+
+		return $caps;
 	}
 
 	/**
@@ -192,7 +224,7 @@ class BBG_Unconfirmed {
 			else if ( 'user_activation_key' == $orderby )
 				$orderby = 'activation_key';
 
-			$sql['orderby'] = $wpdb->prepare( "ORDER BY %s", $orderby );
+			$sql['orderby'] = "ORDER BY $orderby";
 			$sql['order']	= strtoupper( $order );
 			$sql['limit']	= $wpdb->prepare( "LIMIT %d, %d", $offset, $number );
 		} else {
