@@ -56,6 +56,8 @@ class BBG_Unconfirmed {
 
 		add_filter( 'boones_sortable_columns_keys_to_remove', array( $this, 'sortable_keys_to_remove' ) );
 
+		add_filter( 'map_meta_cap', array( $this, 'map_moderate_signups_cap' ), 10, 4 );
+
 		// Multisite behavior? Configurable for plugins
 		$this->is_multisite = apply_filters( 'unconfirmed_is_multisite', is_multisite() );
 
@@ -84,7 +86,7 @@ class BBG_Unconfirmed {
 	 * @uses add_users_page() to add the admin panel underneath user.php
 	 */
 	function add_admin_panel() {
-		$page = add_users_page( __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'create_users', 'unconfirmed', array( $this, 'admin_panel_main' ) );
+		$page = add_submenu_page( 'users.php', __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'moderate_signups', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
 
 		if ( isset( $_REQUEST['performed_search'] ) && $_REQUEST['performed_search'] == '1' ) return;
@@ -124,6 +126,27 @@ class BBG_Unconfirmed {
 	 */
 	function add_admin_styles() {
 		wp_enqueue_style( 'unconfirmed-css', plugins_url( 'css/style.css', __FILE__ ) );
+	}
+
+	/**
+	 * Map the 'moderate_signups' cap.
+	 *
+	 * 'moderate_signups' is the custom capability used by Unconfirmed for management of signups.
+	 * By default, we map this to 'create_users', but it is possible to override.
+	 *
+	 * @since 1.3
+	 *
+	 * @param array  $caps
+	 * @param string $cap
+	 * @param int    $user_id
+	 * @param array  $args
+	 */
+	public function map_moderate_signups_cap( $caps, $cap, $user_id, $args ) {
+		if ( 'moderate_signups' === $cap ) {
+			$caps = array( 'create_users' );
+		}
+
+		return $caps;
 	}
 
 	/**
