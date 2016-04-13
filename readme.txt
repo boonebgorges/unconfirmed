@@ -4,7 +4,7 @@ Donate link: http://teleogistic.net/donate
 Tags: multisite, network, activate, activation, email
 Requires at least: 3.1
 Tested up to: 4.5
-Stable tag: 1.3
+Stable tag: 1.3.1
 
 Allows WordPress admins to manage unactivated users, by activating them manually, deleting their pending registrations, or resending the activation email.
 
