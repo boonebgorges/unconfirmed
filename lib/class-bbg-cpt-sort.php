@@ -1,41 +1,97 @@
 <?php
+/**
+ * Column sorting helper class.
+ *
+ * @package Unconfirmed.
+ */
 
-if ( !class_exists( 'BBG_CPT_Sort' ) ) :
-
+/**
+ * Class BBG_CPT_Sort
+ */
 class BBG_CPT_Sort {
 	/**
-	 * The full column data
+	 * The full column data.
+	 *
+	 * @var array
 	 */
-	var $columns;
-
-	var $column_count;
-	var $current_column;
-	var $column;
-	var $in_the_loop;
+	public $columns;
 
 	/**
-	 * Default orderby column
+	 * The number of columns.
+	 *
+	 * @var int
 	 */
-	var $default_orderby;
+	public $column_count;
 
 	/**
-	 * The desired $_GET keys for orderby and order
+	 * The current column number.
+	 *
+	 * @var int
 	 */
-	var $get_orderby_key;
-	var $get_order_key;
+	public $current_column;
 
 	/**
-	 * The values of orderby and order as retrieved from $_GET
+	 * Current column data.
+	 *
+	 * @var stdClass
 	 */
-	var $get_orderby;
-	var $get_order;
-
-	var $sortable_keys;
+	public $column;
 
 	/**
-	 * The URL used as a base for concatenating links
+	 * Whether we are in the rendering loop.
+	 *
+	 * @var bool
 	 */
-	var $base_url;
+	public $in_the_loop;
+
+	/**
+	 * Default orderby column.
+	 *
+	 * @var string
+	 */
+	public $default_orderby;
+
+	/**
+	 * The desired $_GET key for orderby.
+	 *
+	 * @var string
+	 */
+	public $get_orderby_key;
+
+	/**
+	 * The desired $_GET key for order.
+	 *
+	 * @var string
+	 */
+	public $get_order_key;
+
+	/**
+	 * The value of orderby as retrieved from $_GET.
+	 *
+	 * @var string
+	 */
+	public $get_orderby;
+
+	/**
+	 * The value of order as retrieved from $_GET.
+	 *
+	 * @var string
+	 */
+	public $get_order;
+
+	/**
+	 * The keys by which the columns can be sorted.
+	 *
+	 * @var array
+	 */
+	public $sortable_keys;
+
+	/**
+	 * The URL used as a base for concatenating links.
+	 *
+	 * @var string
+	 */
+	public $base_url;
 
 	/**
 	 * Constructor.
@@ -43,110 +99,114 @@ class BBG_CPT_Sort {
 	 * @package Boone's Sortable Columns
 	 * @since 1.0
 	 *
-	 * $columns should be an array of arrays. That is, an array of args for each column. See
+	 * @param array|false $columns should be an array of arrays. That is, an array of args for each column. See
 	 * $defaults below for an explanation of these arrays.
 	 */
-	function __construct( $cols = false ) {
+	function __construct( $columns = false ) {
 
 		/**
 		 * This defines the default values for *each column*. Please note that the $cols
 		 * param for this method is an array of arrays like this.
 		 *
 		 * Values:
-		 *   - 'name'	The unique identifier of the column, also used (for the time being)
-		 *		as the key for the URL param (eg &orderby=name). When possible, it's
-		 *		handy to use the same orderby param that you use when constructing
-		 *		the posts query. So, for example, you might use 'author' or 'date'.
-		 *		If you don't do this (or can't, because it's not a column natively
-		 * 		understood by WP_Query, or because you're not sorting a WP_Query)
-		 *		you'll have to do some translation between this 'name' value and
-		 *		your actual sorting code, whatever it is.
-		 *   - 'title'	The text that will be used to create the column header.
+		 *   - 'name'   The unique identifier of the column, also used (for the time being)
+		 *      as the key for the URL param (eg &orderby=name). When possible, it's
+		 *      handy to use the same orderby param that you use when constructing
+		 *      the posts query. So, for example, you might use 'author' or 'date'.
+		 *      If you don't do this (or can't, because it's not a column natively
+		 *      understood by WP_Query, or because you're not sorting a WP_Query)
+		 *      you'll have to do some translation between this 'name' value and
+		 *      your actual sorting code, whatever it is.
+		 *   - 'title'  The text that will be used to create the column header.
 		 *   - 'is_sortable' True if you want the column to be sortable, false if not
 		 *   - 'css_class' This object will create a CSS selector that is tailored for use
-		 *		in <th> elements of WP Dashboard 'widefat' tables. That complex CSS
-		 *		selector will automatically contain classes like 'sortable' and
-		 *		'asc', depending on the parameters and on your current page.
-		 *		css_class is an additional class that will be added to the selector
-		 *		so that you can do column-specific styling. If you don't provide
-		 *		a css_class, it'll default to the 'name' parameter.
+		 *      in <th> elements of WP Dashboard 'widefat' tables. That complex CSS
+		 *      selector will automatically contain classes like 'sortable' and
+		 *      'asc', depending on the parameters and on your current page.
+		 *      css_class is an additional class that will be added to the selector
+		 *      so that you can do column-specific styling. If you don't provide
+		 *      a css_class, it'll default to the 'name' parameter.
 		 *   - 'default_order' Accepts 'asc' or 'desc'. Usually you'll want 'asc', except
-		 *		for date-based columns, when it generally makes sense for the
-		 *		most recent columns to be listed first.
+		 *      for date-based columns, when it generally makes sense for the
+		 *      most recent columns to be listed first.
 		 *   - 'posts_column' Right now this does nothing :)
 		 *   - 'is_default' True if you want the given column to be the default sort order.
-		 *		If more than one of your columns have 'is_default' set to true, the
-		 *		last one will take precedence.
+		 *      If more than one of your columns have 'is_default' set to true, the
+		 *      last one will take precedence.
 		 */
-		$defaults = array(
-			'name'		=> false,
-			'title'		=> false,
-			'is_sortable'	=> true,
-			'css_class'	=> false,
-			'default_order'	=> 'asc',
-			'posts_column'	=> false,
-			'is_default'	=> false
-		);
+		$defaults = [
+			'name'          => false,
+			'title'         => false,
+			'is_sortable'   => true,
+			'css_class'     => false,
+			'default_order' => 'asc',
+			'posts_column'  => false,
+			'is_default'    => false,
+		];
 
-		$this->columns = array();
-		$this->sortable_keys = array();
+		$this->columns       = [];
+		$this->sortable_keys = [];
 
-		foreach( $cols as $col ) {
-			// You need at least a name and a title to continue
-			if ( empty( $col['name'] ) || empty( $col['title'] ) )
+		foreach ( $columns as $col ) {
+			// You need at least a name and a title to continue.
+			if ( empty( $col['name'] ) || empty( $col['title'] ) ) {
 				continue;
+			}
 
 			$r = wp_parse_args( $col, $defaults );
 
-			// If the css_class is not set, just use the name param
-			if ( empty( $r['css_class'] ) )
+			// If the css_class is not set, just use the name param.
+			if ( empty( $r['css_class'] ) ) {
 				$r['css_class'] = $r['name'];
+			}
 
 			// Check to see whether this is a default. Providing more than one default
-			// will mean that the last one overrides the others
-			if ( !empty( $r['is_default'] ) )
+			// will mean that the last one overrides the others.
+			if ( ! empty( $r['is_default'] ) ) {
 				$this->default_orderby = $r['name'];
+			}
 
-			// Compare the default order against a whitelist of 'asc' and 'desc'
-			if ( 'asc' == strtolower( $r['default_order'] ) || 'desc' == strtolower( $r['default_order'] ) ) {
+			// Compare the default order against a whitelist of 'asc' and 'desc'.
+			if ( 'asc' === strtolower( $r['default_order'] ) || 'desc' === strtolower( $r['default_order'] ) ) {
 				$r['default_order'] = strtolower( $r['default_order'] );
 			} else {
 				$r['default_order'] = 'asc';
 			}
 
-			// If it's sortable, add the name to the $sortable_keys array
-			if ( $r['is_sortable'] )
+			// If it's sortable, add the name to the $sortable_keys array.
+			if ( $r['is_sortable'] ) {
 				$this->sortable_keys[] = $r['name'];
+			}
 
-			// Convert to an object for maximum prettiness
+			// Convert to an object for maximum prettiness.
 			$col_obj = new stdClass;
 
-			foreach( $r as $key => $value ) {
+			foreach ( $r as $key => $value ) {
 				$col_obj->$key = $value;
 			}
 
 			$this->columns[] = $col_obj;
 		}
 
-		// Now, set up some values for the loop
-		$this->column_count = count( $this->columns );
+		// Now, set up some values for the loop.
+		$this->column_count   = count( $this->columns );
 		$this->current_column = -1;
 
-		// If a default orderby was not found, just choose the first item in the array
-		if ( empty( $this->default_orderby ) && !empty( $cols[0]['name'] ) ) {
-			$this->default_orderby = $cols[0]['name'];
+		// If a default orderby was not found, just choose the first item in the array.
+		if ( empty( $this->default_orderby ) && ! empty( $columns[0]['name'] ) ) {
+			$this->default_orderby = $columns[0]['name'];
 		}
 
-		// Set up the $_GET keys (which are customizable)
+		// Set up the $_GET keys (which are customizable).
 		$this->setup_get_keys();
 
-		// Get the pagination parameters out of $_GET
+		// Get the pagination parameters out of $_GET.
 		$this->setup_get_params();
 
-		// Set up the next orders (asc or desc) depending on current state
+		// Set up the next orders (asc or desc) depending on current state.
 		$this->setup_next_orders();
 
-		// Set up the URL to be used as a base for href links
+		// Set up the URL to be used as a base for href links.
 		$this->setup_base_url();
 	}
 
@@ -160,8 +220,8 @@ class BBG_CPT_Sort {
 	 * @since 1.0
 	 */
 	function setup_get_keys() {
-		$this->get_orderby_key	= apply_filters( 'bbg_cpt_sort_orderby_key', 'orderby' );
-		$this->get_order_key 	= apply_filters( 'bbg_cpt_sort_order_key', 'order' );
+		$this->get_orderby_key = apply_filters( 'bbg_cpt_sort_orderby_key', 'orderby' );
+		$this->get_order_key   = apply_filters( 'bbg_cpt_sort_order_key', 'order' );
 	}
 
 	/**
@@ -175,39 +235,42 @@ class BBG_CPT_Sort {
 	 * @since 1.0
 	 */
 	function setup_get_params() {
-		// Orderby
-		$orderby = isset( $_GET[$this->get_orderby_key] ) ? $_GET[$this->get_orderby_key] : false;
+		// phpcs:disable WordPress.CSRF.NonceVerification
+		// Orderby.
+		$orderby = ! empty( $_GET[ $this->get_orderby_key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $this->get_orderby_key ] ) ) : false;
+		// phpcs:enable
 
 		// If an orderby param is provided, check to see that it's permitted.
-		// Otherwise set the current orderby to the default
-		if ( $orderby && in_array( $orderby, $this->sortable_keys ) ) {
+		// Otherwise set the current orderby to the default.
+		if ( $orderby && in_array( $orderby, $this->sortable_keys, true ) ) {
 			$this->get_orderby = $orderby;
 		} else {
 			$this->get_orderby = $this->default_orderby;
 		}
 
-		// Order
-		$order = isset( $_GET[$this->get_order_key] ) ? $_GET[$this->get_order_key] : false;
+		// phpcs:disable WordPress.CSRF.NonceVerification
+		// Order.
+		$order = ! empty( $_GET[ $this->get_order_key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $this->get_order_key ] ) ) : false;
+		// phpcs:enable
 
-		// If an order is provided, make sure it's either 'desc' or 'asc'
-		// Otherwise set current order to the orderby's default order
-		if ( $order && ( 'desc' == strtolower( $order ) || 'asc' == strtolower( $order ) ) ) {
+		// If an order is provided, make sure it's either 'desc' or 'asc'.
+		// Otherwise set current order to the orderby's default order.
+		if ( $order && ( 'desc' === strtolower( $order ) || 'asc' === strtolower( $order ) ) ) {
 			$order = strtolower( $order );
 		} else {
-			// Loop through to find the default order for this bad boy
-			// This is not optimized because of the way the array is keyed
-			// Cry me a river why don't you
-			foreach( $this->columns as $col ) {
-				if ( $col->name == $this->get_orderby ) {
+			// Loop through to find the default order for this bad boy.
+			// This is not optimized because of the way the array is keyed.
+			// Cry me a river why don't you.
+			foreach ( $this->columns as $col ) {
+				if ( $col->name === $this->get_orderby ) {
 					$order = $col->default_order;
 					break;
 				}
 			}
 		}
 
-		// There should only be two options, 'asc' and 'desc'. We'll cut some slack for
-		// uppercase variants
-		$order = 'desc' == strtolower( $order ) ? 'desc' : 'asc';
+		// There should only be two options, 'asc' and 'desc'. We'll cut some slack for uppercase variants.
+		$order = 'desc' === strtolower( $order ) ? 'desc' : 'asc';
 
 		$this->get_order = $order;
 	}
@@ -227,15 +290,15 @@ class BBG_CPT_Sort {
 	 * @since 1.0
 	 */
 	function setup_next_orders() {
-		foreach( $this->columns as $name => $col ) {
-			if ( $col->name == $this->get_orderby ) {
+		foreach ( $this->columns as $name => $col ) {
+			if ( $col->name === $this->get_orderby ) {
 				$current_order = $this->get_order;
-				$next_order = 'asc' == $current_order ? 'desc' : 'asc';
+				$next_order    = 'asc' === $current_order ? 'desc' : 'asc';
 			} else {
 				$next_order = $col->default_order;
 			}
 
-			$this->columns[$name]->next_order = $next_order;
+			$this->columns[ $name ]->next_order = $next_order;
 		}
 	}
 
@@ -267,16 +330,16 @@ class BBG_CPT_Sort {
 	 * @param str $url The base URL. Optional. Defaults to $_SERVER['REQUEST_URI'].
 	 */
 	function setup_base_url( $url = false ) {
-		if ( !$url ) {
-			$current_keys = array_keys( $_GET );
+		if ( ! $url ) {
+			// These are keys that will always be removed from the base url.
+			$keys_to_remove = apply_filters(
+				'boones_sortable_columns_keys_to_remove', [
+					'_wpnonce',
+					'paged',
+				]
+			);
 
-			// These are keys that will always be removed from the base url
-			$keys_to_remove = apply_filters( 'boones_sortable_columns_keys_to_remove', array(
-				'_wpnonce',
-				'paged'
-			) );
-
-			foreach( $keys_to_remove as $key ) {
+			foreach ( $keys_to_remove as $key ) {
 				$url = remove_query_arg( $key, $url );
 			}
 		}
@@ -299,9 +362,10 @@ class BBG_CPT_Sort {
 	 * @since 1.0
 	 */
 	function have_columns() {
-		// Compare against the column_count - 1 to account for the 0 array index shift
-		if ( $this->column_count && $this->current_column < $this->column_count - 1 )
+		// Compare against the column_count - 1 to account for the 0 array index shift.
+		if ( $this->column_count && $this->current_column < $this->column_count - 1 ) {
 			return true;
+		}
 
 		return false;
 	}
@@ -314,7 +378,7 @@ class BBG_CPT_Sort {
 	 */
 	function next_column() {
 		$this->current_column++;
-		$this->column = $this->columns[$this->current_column];
+		$this->column = $this->columns[ $this->current_column ];
 
 		return $this->column;
 	}
@@ -340,14 +404,15 @@ class BBG_CPT_Sort {
 	 */
 	function the_column() {
 		$this->in_the_loop = true;
-		$this->column = $this->next_column();
+		$this->column      = $this->next_column();
 
-		if ( 0 == $this->current_column ) // loop has just started
-			do_action('loop_start');
+		if ( 0 === (int) $this->current_column ) { // loop has just started.
+			do_action( 'loop_start' );
+		}
 	}
 
 	/**
-	 * Constructs a complex CSS selector for the column header
+	 * Constructs a complex CSS selector for the column header.
 	 *
 	 * This set of CSS classes is designed to work seamlessly with WP's admin CSS and JS for
 	 * <th> elements inside of <table class="widefat">. With just a bit of custom CSS and JS,
@@ -361,31 +426,25 @@ class BBG_CPT_Sort {
 	 * @package Boone's Sortable Columns
 	 * @since 1.0
 	 *
-	 * @param str $type 'echo' if you want the result echo, 'return' if you want it returned
-	 * @return str $class The CSS classes, separated by spaces
+	 * @return string The CSS classes, separated by spaces
 	 */
-	function the_column_css_class( $type = 'echo' ) {
-		// The column-identifying class
-		$class = array( $this->column->css_class );
+	function get_the_column_css_class() {
+		// The column-identifying class.
+		$class = [ $this->column->css_class ];
 
-		// Sortable logic
+		// Sortable logic.
 		if ( $this->column->is_sortable ) {
-			// Add the sorted/sortable class, based on whether this is the current sort
-			if ( $this->column->name == $this->get_orderby ) {
+			// Add the sorted/sortable class, based on whether this is the current sort.
+			if ( $this->column->name === $this->get_orderby ) {
 				$class[] = 'sorted';
 				$class[] = $this->get_order;
 			} else {
 				$class[] = 'sortable';
-				$class[] = 'asc' == $this->column->default_order ? 'desc' : 'asc';
+				$class[] = 'asc' === $this->column->default_order ? 'desc' : 'asc';
 			}
 		}
 
-		$class = implode( ' ', $class );
-
-		if ( 'echo' == $type )
-			echo $class;
-		else
-			return $class;
+		return implode( ' ', $class );
 	}
 
 	/**
@@ -409,8 +468,8 @@ class BBG_CPT_Sort {
 	 *
 	 *   <?php if ( $sortable->have_columns() ) : ?>
 	 *      <?php while ( $sortable->have_columns() ) : $sortable->the_column() ?>
-	 *	   <?php $sortable->the_column_next_link() ?>
-	 *	<?php endwhile ?>
+	 *     <?php $sortable->the_column_next_link() ?>
+	 *  <?php endwhile ?>
 	 *   <?php endif ?>
 	 *
 	 * will output the following HTML:
@@ -422,55 +481,19 @@ class BBG_CPT_Sort {
 	 *
 	 * @package Boone's Sortable Columns
 	 * @since 1.0
-	 *
-	 * @param str $type 'echo' if you want the result echo, 'return' if you want it returned
-	 * @param str $html_or_url 'html' if you want the entire anchor HTML, or 'url' if you just
-	 *    want the URL for the href
-	 * @return str $link The link URL or the HTML anchor object, depending on the $html_or_url
-	 *    param
+
+	 * @return string The link URL.
 	 */
-	function the_column_next_link( $type = 'echo', $html_or_url = 'html' ) {
-		$args = array(
-			$this->get_orderby_key	=> $this->column->name,
-			$this->get_order_key	=> $this->column->next_order
+	function get_the_column_next_link() {
+		return esc_url_raw(
+			add_query_arg(
+				[
+					$this->get_orderby_key => $this->column->name,
+					$this->get_order_key   => $this->column->next_order,
+				],
+				$this->base_url
+			)
 		);
-
-		$url = add_query_arg( $args, $this->base_url );
-
-		// Assemble the html link, if necessary
-		if ( 'html' == $html_or_url ) {
-			$html = sprintf( '<a title="%1$s" href="%2$s">%3$s</a>', $this->column->name, $url, $this->the_column_title( 'return' ) );
-
-			$link = $html;
-		} else {
-			$link = $url;
-		}
-
-		if ( 'echo' == $type )
-			echo $link;
-		else
-			return $link;
-	}
-
-	/**
-	 * Gets the title text for the column header
-	 *
-	 * Essentially, this just returns the value of 'title' fed to $cols. See
-	 * BBG_CPT_Sort::__construct() for more information
-	 *
-	 * @package Boone's Sortable Columns
-	 * @since 1.0
-	 *
-	 * @param str $type 'echo' if you want the result echo, 'return' if you want it returned
-	 * @return str $class The title
-	 */
-	function the_column_title( $type = 'echo' ) {
-		$name = $this->column->title;
-
-		if ( 'echo' == $type )
-			echo $name;
-		else
-			return $name;
 	}
 
 	/**
@@ -493,26 +516,34 @@ class BBG_CPT_Sort {
 	 * @package Boone's Sortable Columns
 	 * @since 1.0
 	 *
-	 * @param str $type 'echo' if you want the result echo, 'return' if you want it returned
-	 * @return str $class The <th> element
+	 * @param string $type Optional. Use 'echo' to output the column <th>.
+	 *
+	 * @return string The column <th>.
 	 */
 	function the_column_th( $type = 'echo' ) {
 		if ( $this->column->is_sortable ) {
-			$td_content = sprintf( '<a href="%1$s"><span>%2$s</span><span class="sorting-indicator"></span></a>', $this->the_column_next_link( 'return', 'url' ), $this->the_column_title( 'return' ) );
+			$safe_td_content = sprintf(
+				'<a href="%1$s"><span>%2$s</span><span class="sorting-indicator"></span></a>',
+				esc_url( $this->get_the_column_next_link() ),
+				esc_html( $this->column->title )
+			);
 		} else {
-			$td_content = $this->the_column_title( 'return' );
+			$safe_td_content = esc_html( $this->column->title );
 
 		}
 
-		$html = sprintf( '<th scope="col" class="manage-column %1$s">%2$s</th>', $this->the_column_css_class( 'return' ), $td_content );
+		$safe_column_th = sprintf(
+			'<th scope="col" class="manage-column %1$s">%2$s</th>',
+			esc_attr( $this->get_the_column_css_class() ),
+			$safe_td_content
+		);
 
-		if ( 'echo' == $type )
-			echo $html;
-		else
-			return $html;
+		if ( 'echo' === $type ) {
+			// phpcs:disable WordPress.XSS.EscapeOutput
+			echo $safe_column_th;
+			// phpcs:enable
+		}
+
+		return $safe_column_th;
 	}
 }
-
-endif;
-
-?>
