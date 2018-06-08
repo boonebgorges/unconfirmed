@@ -1,42 +1,76 @@
 <?php
+/**
+ * Helper class for creating pagination on CPT list views.
+ *
+ * @package Unconfirmed
+ */
 
-if ( !class_exists( 'BBG_CPT_Pag' ) ) :
-
+/**
+ * Class BBG_CPT_Pag
+ */
 class BBG_CPT_Pag {
 	/**
-	 * The CPT query. Defaults to $wp_query; see BBG_CPT_Pag::setup_query()
+	 * The CPT query.
+	 *
+	 * Defaults to $wp_query; see BBG_CPT_Pag::setup_query().
+	 *
+	 * @var WP_Query
 	 */
-	var $query;
+	public $query;
 
 	/**
-	 * The desired $_GET keys for per_page and paged
+	 * The desired $_GET keys for per_page.
+	 *
+	 * @var string
 	 */
-	var $get_per_page_key;
-	var $get_paged_key;
+	public $get_per_page_key;
 
 	/**
-	 * The values of per_page and paged as retrieved from $_GET
+	 * The desired $_GET keys for paged.
+	 *
+	 * @var string
 	 */
-	var $get_per_page;
-	var $get_paged;
+	public $get_paged_key;
 
 	/**
-	 * The number of items found, and the total page number based on this
+	 * The value of per_page as retrieved from $_GET.
+	 *
+	 * @var int
 	 */
-	var $total_items;
-	var $total_pages;
+	public $get_per_page;
 
 	/**
-	 * Constructor.
+	 * The value of paged as retrieved from $_GET.
+	 *
+	 * @var int
+	 */
+	public $get_paged;
+
+	/**
+	 * The number of items found.
+	 *
+	 * @var int
+	 */
+	public $total_items;
+
+	/**
+	 * The number of total pages based on the number of items found.
+	 *
+	 * @var int
+	 */
+	public $total_pages;
+
+	/**
+	 * BBG_CPT_Pag constructor.
 	 *
 	 * @package Boone's Pagination
 	 * @since 1.0
 	 */
-	function __construct( $query = false ) {
-		// Set up the $_GET keys (which are customizable)
+	function __construct() {
+		// Set up the $_GET keys (which are customizable).
 		$this->setup_get_keys();
 
-		// Get the pagination parameters out of $_GET
+		// Get the pagination parameters out of $_GET.
 		$this->setup_get_params();
 	}
 
@@ -54,21 +88,24 @@ class BBG_CPT_Pag {
 	 * you use WP_Query to run your query (so that the data is not in $wp_query), you should
 	 * pass your query object along to setup_query().
 	 *
+	 * @param WP_Query|false $query CPT query.
+	 *
 	 * @package Boone's Pagination
 	 * @since 1.0
 	 */
 	function setup_query( $query = false ) {
 		global $wp_query;
 
-		if ( !$query )
+		if ( ! $query ) {
 			$query =& $wp_query;
+		}
 
 		$this->query = $query;
 
-		// Get the total number of items
+		// Get the total number of items.
 		$this->setup_total_items();
 
-		// Get the total number of pages
+		// Get the total number of pages.
 		$this->setup_total_pages();
 	}
 
@@ -89,35 +126,25 @@ class BBG_CPT_Pag {
 		 * other choices threatened to interfere with native WP functions. In particular,
 		 * 'page' is already used in the Dashboard area to signify a plugin settings page.
 		 */
-		$this->get_paged_key 	= apply_filters( 'bbg_cpt_pag_paged_key', 'paged' );
+		$this->get_paged_key = apply_filters( 'bbg_cpt_pag_paged_key', 'paged' );
 	}
 
 	/**
-	 * Gets params out of $_GET global
+	 * Gets params out of $_GET global.
 	 *
-	 * Does some basic checks to ensure that the values are integers and that they are non-empty
+	 * Does some basic checks to ensure that the values are integers and that they are non-empty.
 	 *
 	 * @package Boone's Pagination
 	 * @since 1.0
 	 */
 	function setup_get_params() {
-		// Per page
-		$per_page = isset( $_GET[$this->get_per_page_key] ) ? $_GET[$this->get_per_page_key] : 10;
+		// phpcs:disable WordPress.CSRF.NonceVerification
+		// Per page.
+		$this->get_per_page = ! empty( $_GET[ $this->get_per_page_key ] ) ? absint( wp_unslash( $_GET[ $this->get_per_page_key ] ) ) : 10;
 
-		// Basic per_page sanity and security
-		if ( !(int)$per_page )
-			$per_page = 10;
-
-		$this->get_per_page = $per_page;
-
-		// Page number
-		$paged = isset( $_GET[$this->get_paged_key] ) ? $_GET[$this->get_paged_key] : 1;
-
-		// Basic paged sanity and security
-		if ( !(int)$paged )
-			$paged = 1;
-
-		$this->get_paged = $paged;
+		// Page number.
+		$this->get_paged = ! empty( $_GET[ $this->get_paged_key ] ) ? absint( wp_unslash( $_GET[ $this->get_paged_key ] ) ) : 1;
+		// phpcs:enable
 	}
 
 	/**
@@ -167,15 +194,14 @@ class BBG_CPT_Pag {
 	 * @package Boone's Pagination
 	 * @since 1.0
 	 *
-	 * @return int $end The start number
+	 * @return int $end The start number.
 	 */
 	function get_end_number() {
-		global $wp_query;
-
 		$end = $this->get_paged * $this->get_per_page;
 
-		if ( $end > $this->total_items )
+		if ( $end > $this->total_items ) {
 			$end = $this->total_items;
+		}
 
 		return $end;
 	}
@@ -186,19 +212,24 @@ class BBG_CPT_Pag {
 	 * @package Boone's Pagination
 	 * @since 1.0
 	 *
-	 * @param str $type Optional. 'echo' will echo the results, anything else will return them
-	 * @return str $page_links The "viewing" text
+	 * @param string $type Optional. Use 'echo' to output the viewing message.
+	 *
+	 * @return string $page_links The "viewing" text.
 	 */
 	function currently_viewing_text( $type = 'echo' ) {
-		$start  = $this->get_start_number();
-		$end	= $this->get_end_number();
+		$start = $this->get_start_number();
+		$end   = $this->get_end_number();
 
-		$string = sprintf( __( 'Viewing %1$d - %2$d of a total of %3$d', 'bbg-cpt-pag' ), $start, $end, $this->total_items );
+		/* translators: 1 start number, 2 end number, 3 total number */
+		$string = sprintf( esc_html__( 'Viewing %1$d - %2$d of a total of %3$d', 'bbg-cpt-pag' ), $start, $end, $this->total_items );
 
-		if ( 'echo' == $type )
+		if ( 'echo' === $type ) {
+			// phpcs:disable WordPress.XSS.EscapeOutput
 			echo $string;
-		else
-			return $string;
+			// phpcs:enable
+		}
+
+		return $string;
 	}
 
 	/**
@@ -207,28 +238,31 @@ class BBG_CPT_Pag {
 	 * @package Boone's Pagination
 	 * @since 1.0
 	 *
-	 * @param str $type Optional. 'echo' will echo the results, anything else will return them
-	 * @return str $page_links The pagination links
+	 * @param string $type Optional. Use 'echo' to output the pagination links.
+	 *
+	 * @return string $page_links The pagination links HTML.
 	 */
 	function paginate_links( $type = 'echo' ) {
-		$add_args = apply_filters( 'bbg_cpt_pag_add_args' , array( $this->get_per_page_key => $this->get_per_page ) );
-		$page_links = paginate_links( array(
-			'base' 		=> add_query_arg( $this->get_paged_key, '%#%' ),
-			'format' 	=> '',
-			'prev_text' 	=> __( '&laquo;' ),
-			'next_text' 	=> __( '&raquo;' ),
-			'total' 	=> $this->total_pages,
-			'current' 	=> $this->get_paged,
-			'add_args'	=> $add_args
-		));
+		$add_args = apply_filters( 'bbg_cpt_pag_add_args', [ $this->get_per_page_key => $this->get_per_page ] );
 
-		if ( 'echo' == $type )
-			echo $page_links;
-		else
-			return $page_links;
+		$safe_page_links = paginate_links(
+			[
+				'base'      => add_query_arg( $this->get_paged_key, '%#%' ),
+				'format'    => '',
+				'prev_text'     => __( '&laquo;' ),
+				'next_text'     => __( '&raquo;' ),
+				'total'     => $this->total_pages,
+				'current'   => $this->get_paged,
+				'add_args'  => $add_args,
+			]
+		);
+
+		if ( 'echo' === $type ) {
+			// phpcs:disable WordPress.XSS.EscapeOutput
+			echo $safe_page_links;
+			// phpcs:enable
+		}
+
+		return $safe_page_links;
 	}
 }
-
-endif;
-
-?>
