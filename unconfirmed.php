@@ -204,7 +204,11 @@ class BBG_Unconfirmed {
 		);
 
 		$r = wp_parse_args( $args, $defaults );
-		extract( $r );
+
+		$orderby = $r['orderby'];
+		$order   = $r['order'];
+		$offset  = $r['offset'];
+		$number  = $r['number'];
 
 		$search = isset( $_REQUEST['s'] ) ? wp_unslash( trim( $_REQUEST['s'] ) ) : '';
 
@@ -341,11 +345,15 @@ class BBG_Unconfirmed {
 	function get_userdata_from_key( $key ) {
 		global $wpdb;
 
-		if ( $user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE user_activation_key = %s", $key ) ) ) {
+		$user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE user_activation_key = %s", $key ) );
+		if ( $user ) {
 			$key_loc = 'users';
-		} elseif ( $user_id = $wpdb->get_var( $wpdb->prepare( "SELECT user_id FROM $wpdb->usermeta WHERE meta_key = 'activation_key' AND meta_value = %s", $key ) ) ) {
-			$key_loc = 'usermeta';
-			$user    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE ID = %d", (int) $user_id ) );
+		} else {
+			$user_id = $wpdb->get_var( $wpdb->prepare( "SELECT user_id FROM $wpdb->usermeta WHERE meta_key = 'activation_key' AND meta_value = %s", $key ) );
+			if ( $user_id ) {
+				$key_loc = 'usermeta';
+				$user    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE ID = %d", (int) $user_id ) );
+			}
 		}
 
 		return $user;
@@ -672,10 +680,12 @@ class BBG_Unconfirmed {
 
 					switch ( $message_type ) {
 						case 'activated':
+							/* translators: list of email addresses */
 							$message = sprintf( __( 'You successfully activated the following users: %s', 'unconfirmed' ), $emails );
 							break;
 
 						case 'resent':
+							/* translators: list of email addresses */
 							$message = sprintf( __( 'You successfully resent activation emails to the following users: %s', 'unconfirmed' ), $emails );
 							break;
 
@@ -714,6 +724,7 @@ class BBG_Unconfirmed {
 							break;
 
 						case 'couldntactivate':
+							/* translators: list of email addresses */
 							$message = sprintf( __( 'The following users could not be activated: %s', 'unconfirmed' ), $emails );
 							break;
 
@@ -722,6 +733,7 @@ class BBG_Unconfirmed {
 							break;
 
 						case 'unsent':
+							/* translators: list of email addresses */
 							$message = sprintf( __( 'Activations emails could not be resent to the following email addresses: %s', 'unconfirmed' ), $emails );
 							break;
 
@@ -855,7 +867,7 @@ class BBG_Unconfirmed {
 		// Complete the pagination setup
 		$pagination->setup_query( $query );
 
-		$search_value = wp_unslash( $_REQUEST['s'] );
+		$search_value = isset( $_REQUEST['s'] ) ? wp_unslash( $_REQUEST['s'] ) : '';
 
 		?>
 		<div class="wrap">
@@ -961,9 +973,11 @@ class BBG_Unconfirmed {
 								add_query_arg(
 									array(
 										'unconfirmed_action' => 'delete',
-										'unconfirmed_key'    => $user->activation_key,
-									), $this->base_url
-								), 'unconfirmed_delete_user'
+										'unconfirmed_key' => $user->activation_key,
+									),
+									$this->base_url
+								),
+								'unconfirmed_delete_user'
 							);
 							?>
 							<span class="delete"><a title="<?php esc_html_e( 'Deleting a registration means that it will be removed from the database, and the user will be unable to activate his account. Proceed with caution!', 'unconfirmed' ); ?>" class="confirm" href="<?php echo esc_attr( $delete_url ); ?>"><?php esc_html_e( 'Delete', 'unconfirmed' ); ?></a></span>
