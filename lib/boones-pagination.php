@@ -197,10 +197,11 @@ if ( ! class_exists( 'BBG_CPT_Pag' ) ) :
 			$start = $this->get_start_number();
 			$end   = $this->get_end_number();
 
-			$string = sprintf( __( 'Viewing %1$d - %2$d of a total of %3$d', 'bbg-cpt-pag' ), $start, $end, $this->total_items );
+			/* translators: 1. start number, 2. end number, 3. total user count */
+			$string = sprintf( __( 'Viewing %1$d - %2$d of a total of %3$d', 'unconfirmed' ), $start, $end, $this->total_items );
 
 			if ( 'echo' == $type ) {
-				echo $string;
+				echo esc_html( $string );
 			} else {
 				return $string;
 			}
@@ -221,8 +222,8 @@ if ( ! class_exists( 'BBG_CPT_Pag' ) ) :
 				array(
 					'base'      => add_query_arg( $this->get_paged_key, '%#%' ),
 					'format'    => '',
-					'prev_text' => __( '&laquo;' ),
-					'next_text' => __( '&raquo;' ),
+					'prev_text' => __( '&laquo;', 'unconfirmed' ),
+					'next_text' => __( '&raquo;', 'unconfirmed' ),
 					'total'     => $this->total_pages,
 					'current'   => $this->get_paged,
 					'add_args'  => $add_args,
