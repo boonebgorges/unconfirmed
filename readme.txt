@@ -22,6 +22,10 @@ Unconfirmed creates a Dashboard panel under the Users menu (Network Admin > User
 
 == Changelog ==
 
+= 1.3.2 =
+* Internationalization improvements
+* Coding standards fixes
+
 = 1.3.1 =
 * Fix bug that causes email resend to fail on BP 2.5+
 
