@@ -752,8 +752,8 @@ class BBG_Unconfirmed {
 			?>
 
 			<?php foreach ( (array) $this->message as $message_type => $text ) : ?>
-			<div id="message" class="<?php echo $message_type; ?>">
-				<p><?php echo $text; ?></p>
+			<div id="message" class="<?php echo esc_attr( $message_type ); ?>">
+				<p><?php echo esc_html( $text ); ?></p>
 			</div>
 		<?php endforeach ?>
 
@@ -855,23 +855,20 @@ class BBG_Unconfirmed {
 		// Complete the pagination setup
 		$pagination->setup_query( $query );
 
+		$search_value = wp_unslash( $_REQUEST['s'] );
+
 		?>
 		<div class="wrap">
 
-		<h2><?php _e( 'Unconfirmed', 'unconfirmed' ); ?></h2>
+		<h2><?php esc_html_e( 'Unconfirmed', 'unconfirmed' ); ?></h2>
 
 		<?php $this->render_messages(); ?>
 
-		<form action="<?php echo $this->base_url; ?>" method="post">
+		<form action="<?php echo esc_attr( $this->base_url ); ?>" method="post">
 
 		<p class="search-box">
-			<label class="screen-reader-text" for="unconfirmed-search-input">Search:</label>
-			<input type="search" id="unconfirmed-search-input" name="s" value="
-			<?php
-			if ( ! empty( $_REQUEST['s'] ) ) {
-				echo esc_attr( $_REQUEST['s'] );}
-			?>
-			">
+			<label class="screen-reader-text" for="unconfirmed-search-input"><?php esc_html_e( 'Search:', 'unconfirmed' ); ?></label>
+			<input type="search" id="unconfirmed-search-input" name="s" value="<?php echo esc_attr( $search_value ); ?>">
 			<input type="hidden" id="unconfirmed-performed-search-input" name="performed_search" value="0">
 			<input type="submit" name="search_submit" id="search-submit" class="button" value="Search" onclick="document.getElementById('unconfirmed-performed-search-input').value = '1';">
 		</p>
@@ -880,12 +877,12 @@ class BBG_Unconfirmed {
 			<div class="tablenav top">
 				<div class="alignleft actions">
 					<select name="unconfirmed_action">
-						<option value="resend"><?php _e( 'Resend Activation Email', 'unconfirmed' ); ?>&nbsp;&nbsp;</option>
-						<option value="activate"><?php _e( 'Activate', 'unconfirmed' ); ?></option>
-						<option value="delete"><?php _e( 'Delete', 'unconfirmed' ); ?></option>
+						<option value="resend"><?php esc_html_e( 'Resend Activation Email', 'unconfirmed' ); ?>&nbsp;&nbsp;</option>
+						<option value="activate"><?php esc_html_e( 'Activate', 'unconfirmed' ); ?></option>
+						<option value="delete"><?php esc_html_e( 'Delete', 'unconfirmed' ); ?></option>
 					</select>
 
-					<input id="doaction" class="button-secondary action" type="submit" value="<?php _e( 'Apply', 'unconfirmed' ); ?>" />
+					<input id="doaction" class="button-secondary action" type="submit" value="<?php esc_html_e( 'Apply', 'unconfirmed' ); ?>" />
 					<input type="hidden" name="unconfirmed_bulk" value="1" />
 
 					<?php wp_nonce_field( 'unconfirmed_bulk_action' ); ?>
@@ -911,12 +908,13 @@ class BBG_Unconfirmed {
 					</th>
 
 					<?php
-					if ( $sortable->have_columns() ) :
-						while ( $sortable->have_columns() ) :
+					if ( $sortable->have_columns() ) {
+						while ( $sortable->have_columns() ) {
 							$sortable->the_column();
-							?>
-							<?php $sortable->the_column_th(); ?>
-											<?php endwhile; endif ?>
+							$sortable->the_column_th();
+						}
+					}
+					?>
 
 				</tr>
 			</thead>
@@ -925,11 +923,11 @@ class BBG_Unconfirmed {
 				<?php foreach ( $this->users as $user ) : ?>
 				<tr>
 					<th scope="row" class="check-column">
-						<input type="checkbox" name="unconfirmed_key[]" value="<?php echo $user->activation_key; ?>" />
+						<input type="checkbox" name="unconfirmed_key[]" value="<?php echo esc_attr( $user->activation_key ); ?>" />
 					</th>
 
 					<td class="login">
-						<?php echo $user->user_login; ?>
+						<?php echo esc_html( $user->user_login ); ?>
 
 						<div class="row-actions">
 							<?php
@@ -942,7 +940,7 @@ class BBG_Unconfirmed {
 								), 'unconfirmed_resend_email'
 							);
 							?>
-							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $resend_url ); ?>"><?php _e( 'Resend Activation Email', 'unconfirmed' ); ?></a></span>
+							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $resend_url ); ?>"><?php esc_html_e( 'Resend Activation Email', 'unconfirmed' ); ?></a></span>
 
 							&nbsp;&nbsp;
 							<?php
@@ -955,7 +953,7 @@ class BBG_Unconfirmed {
 								), 'unconfirmed_activate_user'
 							);
 							?>
-							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $activate_url ); ?>"><?php _e( 'Activate', 'unconfirmed' ); ?></a></span>
+							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $activate_url ); ?>"><?php esc_html_e( 'Activate', 'unconfirmed' ); ?></a></span>
 
 							&nbsp;&nbsp;
 							<?php
@@ -968,31 +966,31 @@ class BBG_Unconfirmed {
 								), 'unconfirmed_delete_user'
 							);
 							?>
-							<span class="delete"><a title="<?php _e( 'Deleting a registration means that it will be removed from the database, and the user will be unable to activate his account. Proceed with caution!', 'unconfirmed' ); ?>" class="confirm" href="<?php echo esc_attr( $delete_url ); ?>"><?php _e( 'Delete', 'unconfirmed' ); ?></a></span>
+							<span class="delete"><a title="<?php esc_html_e( 'Deleting a registration means that it will be removed from the database, and the user will be unable to activate his account. Proceed with caution!', 'unconfirmed' ); ?>" class="confirm" href="<?php echo esc_attr( $delete_url ); ?>"><?php esc_html_e( 'Delete', 'unconfirmed' ); ?></a></span>
 
 						</div>
 					</td>
 
 					<?php if ( ! $this->is_multisite ) : ?>
 						<td class="display_name">
-							<?php echo $user->display_name; ?>
+							<?php echo esc_html( $user->display_name ); ?>
 						</td>
 					<?php endif ?>
 
 					<td class="email">
-						<?php echo $user->user_email; ?>
+						<?php echo esc_html( $user->user_email ); ?>
 					</td>
 
 					<td class="registered">
-						<?php echo $user->registered; ?>
+						<?php echo esc_html( $user->registered ); ?>
 					</td>
 
 					<td class="activation_key">
-						<?php echo $user->activation_key; ?>
+						<?php echo esc_html( $user->activation_key ); ?>
 					</td>
 
 					<td class="activation_key">
-						<?php echo (int) $user->resent_count; ?>
+						<?php echo esc_html( (int) $user->resent_count ); ?>
 					</td>
 
 				</tr>
@@ -1014,7 +1012,7 @@ class BBG_Unconfirmed {
 
 		<?php else : ?>
 
-			<p><?php _e( 'No unactivated members were found.', 'unconfirmed' ); ?></p>
+			<p><?php esc_html_e( 'No unactivated members were found.', 'unconfirmed' ); ?></p>
 
 		<?php endif ?>
 
