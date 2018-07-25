@@ -100,7 +100,7 @@ class BBG_Unconfirmed {
 		$page = add_submenu_page( 'users.php', __( 'Unconfirmed', 'unconfirmed' ), __( 'Unconfirmed', 'unconfirmed' ), 'moderate_signups', 'unconfirmed', array( $this, 'admin_panel_main' ) );
 		add_action( "admin_print_styles-$page", array( $this, 'add_admin_styles' ) );
 
-		if ( isset( $_REQUEST['performed_search'] ) && $_REQUEST['performed_search'] == '1' ) {
+		if ( isset( $_REQUEST['performed_search'] ) && '1' == $_REQUEST['performed_search'] ) {
 			return;
 		}
 
