@@ -5,9 +5,9 @@ Plugin Name: Unconfirmed
 Plugin URI: http://github.com/boonebgorges/unconfirmed
 Description: Allows admins on a WordPress Multisite network to manage unactivated users, by either activating them manually or resending the activation email.
 Author: Boone B Gorges
-Author URI: http://boone.gorg.es
+Author URI: https://boone.gorg.es
 License: GPLv3
-Version: 1.3.1
+Version: 1.3.2
 Text Domain: unconfirmed
 Domain Path: /languages/
 */
