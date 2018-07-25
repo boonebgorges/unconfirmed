@@ -8,6 +8,8 @@ Author: Boone B Gorges
 Author URI: http://boone.gorg.es
 License: GPLv3
 Version: 1.3.1
+Text Domain: unconfirmed
+Domain Path: /languages/
 */
 
 class BBG_Unconfirmed {
