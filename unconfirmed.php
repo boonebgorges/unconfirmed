@@ -932,9 +932,8 @@ class BBG_Unconfirmed {
 						<?php echo $user->user_login; ?>
 
 						<div class="row-actions">
-							<span class="edit"><a class="confirm" href="
 							<?php
-							echo wp_nonce_url(
+							$resend_url = wp_nonce_url(
 								add_query_arg(
 									array(
 										'unconfirmed_action' => 'resend',
@@ -943,12 +942,11 @@ class BBG_Unconfirmed {
 								), 'unconfirmed_resend_email'
 							);
 							?>
-																		"><?php _e( 'Resend Activation Email', 'unconfirmed' ); ?></a></span>
+							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $resend_url ); ?>"><?php _e( 'Resend Activation Email', 'unconfirmed' ); ?></a></span>
 
 							&nbsp;&nbsp;
-							<span class="edit"><a class="confirm" href="
 							<?php
-							echo wp_nonce_url(
+							$activate_url = wp_nonce_url(
 								add_query_arg(
 									array(
 										'unconfirmed_action' => 'activate',
@@ -957,21 +955,20 @@ class BBG_Unconfirmed {
 								), 'unconfirmed_activate_user'
 							);
 							?>
-																		"><?php _e( 'Activate', 'unconfirmed' ); ?></a></span>
+							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $activate_url ); ?>"><?php _e( 'Activate', 'unconfirmed' ); ?></a></span>
 
 							&nbsp;&nbsp;
-							<span class="delete"><a title="<?php _e( 'Deleting a registration means that it will be removed from the database, and the user will be unable to activate his account. Proceed with caution!', 'unconfirmed' ); ?>" class="confirm" href="
-																	 <?php
-																		echo wp_nonce_url(
-																			add_query_arg(
-																				array(
-																					'unconfirmed_action' => 'delete',
-																					'unconfirmed_key'    => $user->activation_key,
-																				), $this->base_url
-																			), 'unconfirmed_delete_user'
-																		);
-																		?>
-																																																																		"><?php _e( 'Delete', 'unconfirmed' ); ?></a></span>
+							<?php
+							$delete_url = wp_nonce_url(
+								add_query_arg(
+									array(
+										'unconfirmed_action' => 'delete',
+										'unconfirmed_key'    => $user->activation_key,
+									), $this->base_url
+								), 'unconfirmed_delete_user'
+							);
+							?>
+							<span class="delete"><a title="<?php _e( 'Deleting a registration means that it will be removed from the database, and the user will be unable to activate his account. Proceed with caution!', 'unconfirmed' ); ?>" class="confirm" href="<?php echo esc_attr( $delete_url ); ?>"><?php _e( 'Delete', 'unconfirmed' ); ?></a></span>
 
 						</div>
 					</td>
