@@ -54,6 +54,8 @@ class BBG_Unconfirmed {
 	 *    goes in the Site Admin or Network Admin
 	 */
 	function __construct() {
+		$this->load_textdomain();
+
 		add_filter( 'bbg_cpt_pag_add_args', array( $this, 'add_args' ) );
 
 		add_filter( 'boones_sortable_columns_keys_to_remove', array( $this, 'sortable_keys_to_remove' ) );
@@ -77,6 +79,15 @@ class BBG_Unconfirmed {
 		$admin_hook = apply_filters( 'unconfirmed_admin_hook', $do_network_admin ? 'network_admin_menu' : 'admin_menu' );
 
 		add_action( $admin_hook, array( $this, 'add_admin_panel' ) );
+	}
+
+	/**
+	 * Load textdomain.
+	 *
+	 * @since 1.3.2
+	 */
+	public function load_textdomain() {
+		load_plugin_textdomain( 'unconfirmed', false, basename( dirname( __FILE__ ) ) . '/languages' );
 	}
 
 	/**
