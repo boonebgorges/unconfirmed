@@ -14,6 +14,9 @@ Domain Path: /languages/
 
 define( 'UNCONFIRMED_PLUGIN_DIR', dirname( __FILE__ ) );
 
+/**
+ * Plugin loader.
+ */
 function BBG_Unconfirmed() {
 	global $bbg_unconfirmed;
 

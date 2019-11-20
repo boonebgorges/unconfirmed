@@ -274,11 +274,13 @@ class BBG_Unconfirmed {
 
 		$paged_query = apply_filters( 'unconfirmed_paged_query', join( ' ', $sql ), $sql, $args, $r );
 
-		$users = $wpdb->get_results( $paged_query );
+		$users = $wpdb->get_results( $paged_query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
-		// Now loop through the users and unserialize their metadata for nice display
-		// Probably only necessary with BuddyPress
-		// We'll also use this opportunity to add the resent counts to the user objects
+		/*
+		 * Now loop through the users and unserialize their metadata for nice display
+		 * Probably only necessary with BuddyPress
+		 * We'll also use this opportunity to add the resent counts to the user objects
+		 */
 		foreach ( (array) $users as $key => $user ) {
 
 			$meta = ! empty( $user->meta ) ? maybe_unserialize( $user->meta ) : false;
@@ -313,7 +315,7 @@ class BBG_Unconfirmed {
 		$sql['select'] = preg_replace( '/SELECT.*?FROM/', 'SELECT COUNT(*) FROM', $sql['select'] );
 		$total_query   = apply_filters( 'unconfirmed_total_query', join( ' ', $sql ), $sql, $args, $r );
 
-		$this->total_users = $wpdb->get_var( $total_query );
+		$this->total_users = $wpdb->get_var( $total_query ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
 
 
@@ -413,7 +415,8 @@ class BBG_Unconfirmed {
 				}
 
 				// Change the user's status so they become active
-				if ( ! $result = $wpdb->query( $wpdb->prepare( "UPDATE $wpdb->users SET user_status = 0 WHERE ID = %d", $user_id ) ) ) {
+				$result = $wpdb->query( $wpdb->prepare( "UPDATE $wpdb->users SET user_status = 0 WHERE ID = %d", $user_id ) );
+				if ( ! $result ) {
 					return new WP_Error( 'invalid_key', __( 'Invalid activation key', 'unconfirmed' ) );
 				}
 			}
@@ -469,7 +472,7 @@ class BBG_Unconfirmed {
 				}
 
 				$delete_sql = apply_filters( 'unconfirmed_delete_sql', $wpdb->prepare( "DELETE FROM $wpdb->signups WHERE activation_key = %s", $key ), $key, $this->is_multisite );
-				$result     = $wpdb->query( $delete_sql );
+				$result     = $wpdb->query( $delete_sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			} else {
 				// Ensure the user exists before deleting, and pass the data along
 				// to a hook
@@ -643,7 +646,7 @@ class BBG_Unconfirmed {
 					}
 					$activation_keys = implode( ',', $activation_keys );
 
-					$registrations = $wpdb->get_results( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" );
+					$registrations = $wpdb->get_results( "SELECT user_email, activation_key FROM $wpdb->signups WHERE activation_key IN ({$activation_keys})" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 				} else {
 					$registrations = array();
 					foreach ( (array) $activation_keys as $akey ) {
@@ -962,8 +965,10 @@ class BBG_Unconfirmed {
 									array(
 										'unconfirmed_action' => 'resend',
 										'unconfirmed_key' => $user->activation_key,
-									), $this->base_url
-								), 'unconfirmed_resend_email'
+									),
+									$this->base_url
+								),
+								'unconfirmed_resend_email'
 							);
 							?>
 							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $resend_url ); ?>"><?php esc_html_e( 'Resend Activation Email', 'unconfirmed' ); ?></a></span>
@@ -975,8 +980,10 @@ class BBG_Unconfirmed {
 									array(
 										'unconfirmed_action' => 'activate',
 										'unconfirmed_key' => $user->activation_key,
-									), $this->base_url
-								), 'unconfirmed_activate_user'
+									),
+									$this->base_url
+								),
+								'unconfirmed_activate_user'
 							);
 							?>
 							<span class="edit"><a class="confirm" href="<?php echo esc_attr( $activate_url ); ?>"><?php esc_html_e( 'Activate', 'unconfirmed' ); ?></a></span>
