@@ -384,6 +384,10 @@ class BBG_Unconfirmed {
 	function activate_user() {
 		global $wpdb;
 
+		if ( ! current_user_can( 'edit_users' ) ) {
+			return;
+		}
+
 		// Did you mean to do this? HMMM???
 		if ( isset( $_REQUEST['unconfirmed_bulk'] ) ) {
 			check_admin_referer( 'unconfirmed_bulk_action' );
@@ -440,6 +444,10 @@ class BBG_Unconfirmed {
 	 */
 	function delete_user() {
 		global $wpdb;
+
+		if ( ! current_user_can( 'remove_users' ) ) {
+			return;
+		}
 
 		// Don't go there
 		if ( isset( $_REQUEST['unconfirmed_bulk'] ) ) {
@@ -515,6 +523,10 @@ class BBG_Unconfirmed {
 	 */
 	function resend_email() {
 		global $wpdb;
+
+		if ( ! current_user_can( 'edit_users' ) ) {
+			return;
+		}
 
 		// Hubba hubba
 		if ( isset( $_REQUEST['unconfirmed_bulk'] ) ) {
