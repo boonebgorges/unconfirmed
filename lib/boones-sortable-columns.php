@@ -350,7 +350,7 @@ if ( ! class_exists( 'BBG_CPT_Sort' ) ) :
 			$this->column      = $this->next_column();
 
 			if ( 0 == $this->current_column ) { // loop has just started
-				do_action( 'loop_start' );
+				do_action( 'loop_start', $GLOBALS['wp_query']);
 			}
 		}
 
