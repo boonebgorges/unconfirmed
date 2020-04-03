@@ -28,6 +28,9 @@ There is currently no support for single-site WP registration without BuddyPress
 
 == Changelog ==
 
+= 1.3.5 =
+* Fix compatibility with FacetWP
+
 = 1.3.4 =
 * Security hardening
 * PHPCS improvements
