@@ -30,6 +30,21 @@ class BBG_Unconfirmed {
 	var $is_multisite;
 
 	/**
+	 * Base URL for this WordPress install
+	 */
+	var $base_url;
+
+	/**
+	 * Count of total user accounts.
+	 */
+	var $total_users;
+
+	/**
+	 * Array of messages.
+	 */
+	var $message;
+
+	/**
 	 * Constructor.
 	 *
 	 * This function sets up a base url to use for URL concatenation throughout the plugin.
