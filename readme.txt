@@ -3,8 +3,8 @@ Contributors: boonebgorges, cuny-academic-commons
 Donate link: http://teleogistic.net/donate
 Tags: multisite, network, activate, activation, email
 Requires at least: 3.1
-Tested up to: 6.3
-Stable tag: 1.3.6
+Tested up to: 6.4
+Stable tag: 1.3.7
 
 Allows WordPress admins to manage unactivated users, by activating them manually, deleting their pending registrations, or resending the activation email.
 
@@ -27,6 +27,9 @@ There is currently no support for single-site WP registration without BuddyPress
 1. Navigate to Network Admin > Users > Unconfirmed
 
 == Changelog ==
+
+= 1.3.7 =
+* Security improvements
 
 = 1.3.6 =
 * Improved compatibility with recent versions of PHP
